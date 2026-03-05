@@ -15,7 +15,7 @@ class Transaction(Base):
     id = Column(Integer, primary_key = True, index=True)
     amount = Column(Float)
     store = Column(String)
-    category = Column(String, Default = "Uncategorized")
+    category = Column(String, default = "Uncategorized")
     created_at = Column(DateTime, default = datetime.utcnow)
 
 class GmailToken(Base):
