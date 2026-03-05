@@ -327,3 +327,50 @@ def top_stores(db: Session = Depends(get_db), limit: int=5):
     )
 
     return ranked[:limit]
+@app.get("/insights")
+def serve_insights():
+    return FileResponse(os.path.join(FRONTEND_DIR, "insights.html"))
+
+@app.get("/insights_data")
+def insights_data(db: Session = Depends(get_db)):
+    week_start = start_of_week_utc(datetime.utcnow())
+
+    txs = db.query(Transaction).filter(Transaction.created_at >= week_start).all()
+
+    weekly_spent = round(sum(float(t.amount) for t in txs), 2)
+    avg_per_day = round(weekly_spent / 7.0, 2)
+
+    totals = {}
+    for t in txs:
+        totals[t.store] = totals.get(t.store, 0) + float(t.amount)
+
+    top_stores = sorted(
+        [{"store": k, "spent": round(v, 2)} for k, v in totals.items()],
+        key=lambda x: x["spent"],
+        reverse=True
+    )[:5]
+
+    largest = None
+    if txs:
+        largest_obj = max(txs, key=lambda t: float(t.amount))
+        largest = {
+            "id": largest_obj.id,
+            "store": largest_obj.store,
+            "amount": float(largest_obj.amount),
+            "created_at": largest_obj.created_at,
+        }
+
+    biggest_sorted = sorted(txs, key=lambda t: float(t.amount), reverse=True)[:10]
+    biggest_txs = [
+        {"id": t.id, "store": t.store, "amount": float(t.amount), "created_at": t.created_at}
+        for t in biggest_sorted
+    ]
+
+    return {
+        "week_start": week_start.isoformat(),
+        "weekly_spent": weekly_spent,
+        "avg_per_day": avg_per_day,
+        "top_stores": top_stores,
+        "largest_tx": largest,
+        "biggest_txs": biggest_txs,
+    }
