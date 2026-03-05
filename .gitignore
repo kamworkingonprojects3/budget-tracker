@@ -1,0 +1,18 @@
+# secrets
+credentials.json
+client_secret*.json
+token.json
+*.env
+.env
+
+# databases
+*.db
+*.db-journal
+
+# python junk
+__pycache__/
+*.pyc
+
+# venv
+.venv/
+venv/
