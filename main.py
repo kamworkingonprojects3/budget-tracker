@@ -16,6 +16,9 @@ from gmail_service import (
 )
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+import os
 
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
@@ -30,6 +33,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+# Serve /frontend/* files (optional but useful if you add css/js later)
+app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+
+@app.get("/")
+def serve_ui():
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 # ---------- DB Dependency ----------
 def get_db():
     db = SessionLocal()
@@ -48,8 +60,8 @@ def start_of_week_utc(dt: datetime) -> datetime:
 
 # ---------- Basic ----------
 @app.get("/")
-def home():
-    return {"message": "Budget app running"}
+def serve_ui():
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
 
 # ---------- Budget ----------
