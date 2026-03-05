@@ -19,6 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import os
+from urllib.parse import urlencode
 
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
@@ -231,8 +232,10 @@ def gmail_auth(request: Request, code: str, state: str, db: Session = Depends(ge
     # clear session keys
     request.session.pop("oauth_state", None)
     request.session.pop("code_verifier", None)
+    
+    params = urlencode({"gmail": "connected"})
+    return RedirectResponse(url=f"/?{params}", status_code=302)
 
-    return {"message": "Gmail connected. You can now POST /gmail/sync"}
 
 
 @app.post("/gmail/sync")

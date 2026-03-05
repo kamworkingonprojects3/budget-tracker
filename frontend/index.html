@@ -34,6 +34,10 @@
       </div>
     </header>
 
+    <div id ="banner" class="hidden mb-6 border border-slate-800 bg-slate-900 px-4 py-3 text-sm">
+      <span id="bannerText"></span>
+    </div>
+
     <!-- Top: Summary + Chart -->
     <section class="grid lg:grid-cols-12 gap-6 mb-6">
 
@@ -192,6 +196,22 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleString();
 }
 
+function showBanner(text) {
+  const b = document.getElementById("banner");
+  const t = document.getElementById("bannerText");
+  t.textContent = text;
+  b.classList.remove("hidden");
+
+  // auto-hide after 4 seconds
+  setTimeout(() => b.classList.add("hidden"), 4000);
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("gmail") === "connected") {
+  showBanner("Gmail connected ✅");
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+}
 // Chart
 let chart;
 function renderChart(labels, values) {
