@@ -257,64 +257,287 @@ Refresh
 </div>
 
 <script>
+const API = "";
 
-const API="";
+const path = window.location.pathname;
+if (path === "/") document.getElementById("tabDashboard")?.classList.add("bg-slate-800");
+if (path === "/insights") document.getElementById("tabInsights")?.classList.add("bg-slate-800");
 
-const path=window.location.pathname;
-if(path==="/")document.getElementById("tabDashboard")?.classList.add("bg-slate-800");
-if(path==="/insights")document.getElementById("tabInsights")?.classList.add("bg-slate-800");
-
-function money(n){
-if(n===null||n===undefined||Number.isNaN(Number(n)))return"$—";
-return"$"+Number(n).toFixed(2);
+function money(n) {
+  if (n === null || n === undefined || Number.isNaN(Number(n))) return "$—";
+  return "$" + Number(n).toFixed(2);
 }
 
-function fmtDate(iso){
-if(!iso)return"";
-return new Date(iso).toLocaleString();
+function fmtDate(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString();
+}
+
+function showBanner(text) {
+  const b = document.getElementById("banner");
+  const t = document.getElementById("bannerText");
+  if (!b || !t) return;
+  t.textContent = text;
+  b.classList.remove("hidden");
+  setTimeout(() => b.classList.add("hidden"), 4000);
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("gmail") === "connected") {
+  showBanner("Gmail connected ✅");
+  window.history.replaceState({}, document.title, window.location.pathname);
 }
 
 let chart;
 
-function renderChart(labels,values){
+function renderChart(labels, values) {
+  const ctx = document.getElementById("spendChart");
+  if (!ctx) return;
 
-const ctx=document.getElementById("spendChart");
+  if (chart) chart.destroy();
 
-if(chart)chart.destroy();
-
-chart=new Chart(ctx,{
-type:"bar",
-data:{labels,datasets:[{label:"Spent",data:values}]},
-options:{
-responsive:true,
-maintainAspectRatio:false,
-plugins:{legend:{display:false}},
-scales:{
-x:{ticks:{color:"#cbd5e1"}},
-y:{
-beginAtZero:true,
-ticks:{color:"#cbd5e1",callback:(v)=>"$"+v}
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ label: "Spent", data: values }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: "#cbd5e1" },
+          grid: { color: "rgba(148,163,184,0.12)" }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: "#cbd5e1",
+            callback: (value) => "$" + value
+          },
+          grid: { color: "rgba(148,163,184,0.12)" }
+        }
+      }
+    }
+  });
 }
+
+async function loadBudget() {
+  const res = await fetch(API + "/budget", { cache: "no-store" });
+  if (!res.ok) return;
+
+  const data = await res.json();
+  if (data.error) return;
+
+  const weekly = Number(data.weekly_limit || 0);
+  const remaining = Number(data.remaining || 0);
+  const usedPct = weekly > 0 ? ((weekly - remaining) / weekly) * 100 : 0;
+
+  document.getElementById("weeklyLimit").textContent = money(weekly);
+  document.getElementById("remaining").textContent = money(remaining);
+
+  const bar = document.getElementById("progressBar");
+  if (bar) {
+    bar.style.width = `${Math.min(100, Math.max(0, usedPct))}%`;
+    bar.classList.remove("bg-emerald-500", "bg-yellow-500", "bg-red-500");
+    if (usedPct >= 90) bar.classList.add("bg-red-500");
+    else if (usedPct >= 75) bar.classList.add("bg-yellow-500");
+    else bar.classList.add("bg-emerald-500");
+  }
+
+  document.getElementById("progressText").textContent = `${usedPct.toFixed(1)}% used`;
+
+  try {
+    const statusRes = await fetch(API + "/budget_status", { cache: "no-store" });
+    if (statusRes.ok) {
+      const status = await statusRes.json();
+      const lowWarn = document.getElementById("lowWarn");
+      if (!status.error && status.low_budget) lowWarn?.classList.remove("hidden");
+      else lowWarn?.classList.add("hidden");
+
+      const next = document.getElementById("nextAction");
+      if (next) {
+        if (weekly <= 0) next.textContent = "Set a weekly budget to start tracking.";
+        else if (!status.error && status.low_budget) next.textContent = "You’re low—consider slowing spending or resetting next week.";
+        else next.textContent = "Sync Gmail receipts or add a manual transaction.";
+      }
+    }
+  } catch (e) {}
 }
+
+async function loadTransactions() {
+  const res = await fetch(API + "/transactions", { cache: "no-store" });
+  if (!res.ok) return;
+
+  const txs = await res.json();
+  const list = document.getElementById("txList");
+  list.innerHTML = "";
+
+  document.getElementById("txnCount").textContent = Array.isArray(txs) ? txs.length : "—";
+
+  (txs || []).slice(0, 30).forEach((t) => {
+    const row = document.createElement("div");
+    row.className = "grid grid-cols-12 px-3 py-2 text-sm";
+    row.innerHTML = `
+      <div class="col-span-5 truncate">${t.store ?? "—"}</div>
+      <div class="col-span-5 text-slate-400 text-xs">${fmtDate(t.created_at)}</div>
+      <div class="col-span-2 text-right font-medium">${money(t.amount)}</div>
+    `;
+    list.appendChild(row);
+  });
 }
-});
 
+async function loadWeeklySummary() {
+  const res = await fetch(API + "/weekly_summary", { cache: "no-store" });
+  if (!res.ok) return;
+
+  const data = await res.json();
+  if (data.error) return;
+
+  const spent = Number(data.weekly_spent || 0);
+  document.getElementById("weeklySpent").textContent = money(spent);
+  document.getElementById("weeklySpentSmall").textContent = money(spent);
+  document.getElementById("avgPerDay").textContent = money(spent / 7);
+
+  const top = (data.store_breakdown && data.store_breakdown.length > 0)
+    ? data.store_breakdown[0]
+    : null;
+
+  const topText = top ? `${top.store} (${money(top.spent)})` : "—";
+  document.getElementById("topStore").textContent = topText;
+  document.getElementById("topStoreChart").textContent = topText;
 }
 
-async function refreshAll(){
+async function loadWeeklyChart() {
+  const res = await fetch(API + "/spending_by_day", { cache: "no-store" });
+  if (!res.ok) return;
 
-await Promise.all([
-loadBudget(),
-loadTransactions(),
-loadWeeklySummary(),
-loadWeeklyChart(),
-loadTopStores()
-]);
+  const data = await res.json();
+  if (!Array.isArray(data.labels) || !Array.isArray(data.values)) return;
 
+  renderChart(data.labels, data.values);
+}
+
+async function loadTopStores() {
+  const res = await fetch(API + "/top_stores?limit=5", { cache: "no-store" });
+  if (!res.ok) return;
+
+  const data = await res.json();
+  const list = document.getElementById("topStoresList");
+  list.innerHTML = "";
+
+  if (!Array.isArray(data) || data.length === 0) {
+    list.innerHTML = `<div class="text-slate-500 text-xs">No transactions yet.</div>`;
+    return;
+  }
+
+  data.forEach((item, i) => {
+    const row = document.createElement("div");
+    row.className = "flex items-center justify-between border border-slate-800 bg-slate-900 px-3 py-2";
+    row.innerHTML = `
+      <div class="flex items-center gap-2">
+        <span class="text-slate-500 text-xs w-5">${i + 1}.</span>
+        <span class="text-slate-200">${item.store}</span>
+      </div>
+      <span class="text-slate-100 font-medium">${money(item.spent)}</span>
+    `;
+    list.appendChild(row);
+  });
+
+  const topStoreText = `${data[0].store} (${money(data[0].spent)})`;
+  document.getElementById("topStore").textContent = topStoreText;
+  document.getElementById("topStoreChart").textContent = topStoreText;
+}
+
+document.getElementById("setBudgetBtn").onclick = async () => {
+  const amount = document.getElementById("budgetInput").value;
+
+  if (!amount || Number(amount) <= 0) {
+    alert("Enter a valid budget amount.");
+    return;
+  }
+
+  const res = await fetch(API + `/set_budget?amount=${encodeURIComponent(amount)}`, {
+    method: "POST"
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    alert("Failed to save budget.\nHTTP " + res.status + "\n" + text);
+    return;
+  }
+
+  document.getElementById("budgetInput").value = "";
+  await refreshAll();
+};
+
+document.getElementById("addTxBtn").onclick = async () => {
+  const amount = document.getElementById("amountInput").value;
+  const store = document.getElementById("storeInput").value || "Manual";
+  const category = document.getElementById("categoryInput").value || "Uncategorized";
+
+  const res = await fetch(
+    API + `/add_transaction?amount=${encodeURIComponent(amount)}&store=${encodeURIComponent(store)}&category=${encodeURIComponent(category)}`,
+    { method: "POST" }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    alert("Failed to add transaction.\nHTTP " + res.status + "\n" + text);
+    return;
+  }
+
+  document.getElementById("amountInput").value = "";
+  document.getElementById("storeInput").value = "";
+  document.getElementById("categoryInput").value = "";
+
+  await refreshAll();
+};
+
+document.getElementById("syncBtn").onclick = async () => {
+  const btn = document.getElementById("syncBtn");
+  btn.disabled = true;
+  btn.textContent = "Syncing...";
+  try {
+    const res = await fetch(API + "/gmail/sync", { method: "POST" });
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Sync failed.\nHTTP " + res.status + "\n" + text);
+      return;
+    }
+    await refreshAll();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Sync";
+  }
+};
+
+document.getElementById("resetBtn").onclick = async () => {
+  const res = await fetch(API + "/reset_week", { method: "POST" });
+  if (!res.ok) {
+    const text = await res.text();
+    alert("Reset failed.\nHTTP " + res.status + "\n" + text);
+    return;
+  }
+  await refreshAll();
+};
+
+document.getElementById("refreshAllBtn").onclick = refreshAll;
+document.getElementById("refreshTxBtn").onclick = loadTransactions;
+
+async function refreshAll() {
+  await Promise.allSettled([
+    loadBudget(),
+    loadTransactions(),
+    loadWeeklySummary(),
+    loadWeeklyChart(),
+    loadTopStores()
+  ]);
 }
 
 refreshAll();
-
 </script>
 
 </body>
