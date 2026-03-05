@@ -22,12 +22,18 @@ import os
 
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
-app.add_middleware(SessionMiddleware, secret_key="65x23er")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="65x23er",
+    same_site="lax",
+    https_only=True,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://127.0.0.1:5500",
         "http://localhost:5500",
+        "https://budget-tracker-ke3y.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],

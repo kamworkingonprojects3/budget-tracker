@@ -4,7 +4,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
-REDIRECT_URI = "http://127.0.0.1:8000/gmail/auth"
+REDIRECT_URI = "https://budget-tracker-ke3y.onrender.com/gmail/auth"
 CLIENT_SECRETS_FILE = "credentials.json"
 
 def make_flow():
