@@ -129,12 +129,12 @@ def reset_week(db: Session = Depends(get_db)):
 
 # ---------- Transactions ----------
 @app.post("/add_transaction/")
-def add_transaction(amount: float, store: str, db: Session = Depends(get_db)):
+def add_transaction(amount: float, store:  str, category: str = "Uncategorized", db: Session = Depends(get_db)):
     budget = db.query(Budget).first()
     if not budget:
         return {"error": "Set a budget first using /set_budget."}
 
-    tx = Transaction(amount=amount, store=store)
+    tx = Transaction(amount=amount, store=store, category = category)
     db.add(tx)
 
     budget.remaining -= amount
@@ -147,7 +147,7 @@ def add_transaction(amount: float, store: str, db: Session = Depends(get_db)):
 def list_transactions(db: Session = Depends(get_db)):
     txs = db.query(Transaction).order_by(Transaction.id.desc()).all()
     return [
-        {"id": t.id, "amount": t.amount, "store": t.store, "created_at": t.created_at}
+        {"id": t.id, "amount": t.amount, "store": t.store, "category": t.category, "created_at": t.created_at}
         for t in txs
     ]
 
@@ -310,3 +310,20 @@ def spending_by_day(db: Session = Depends(get_db)):
     short_labels = [l[5:] for l in labels]  # MM-DD
 
     return {"labels": short_labels, "values": values, "total": total}
+@app.get("/top_stores")
+def top_stores(db: Session = Depends(get_db), limit: int=5):
+    week_start = start_of_week_utc(datetime.utcnow())
+
+    txs = db.queery(Transaction).filter(Transaction.created_at >= week_start).all()
+
+    totals = {}
+    for t in txs:
+        totals[t.store] = totals.get(t.store, 0) + float(t.amount)
+
+    ranked = sorted(
+        [{"store": k, "spent": round(v,2)} for k, v in totals.items()],
+        key = lambda x: x["spent"],
+        reverse = True
+    )
+
+    return ranked[:limit]

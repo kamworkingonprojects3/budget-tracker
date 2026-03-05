@@ -86,6 +86,12 @@
               <p class="text-xs text-slate-400">Avg/day</p>
               <p id="avgPerDay" class="text-lg font-semibold">$—</p>
             </div>
+            <div class="bg-slate-950 border border-slate-800 p-4">
+              <p class="text-xs text-slate-400">Top stores this week</p>
+              <p id="topStore" class="text-lg font-semibold mt-1">—</p>
+
+              <div id="topStoresList" class="mt-3 space-y-2 text-sm"></div>
+            </div>
           </div>
 
           <!-- Set budget -->
@@ -149,6 +155,9 @@
           <input id="storeInput" type="text"
             class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600"
             placeholder="Store (Amazon, Uber…)" />
+          <input id="categoryInput" type="text"
+            class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600"
+            placeholder="Category (Food, Shopping…)" />
           <button id="addTxBtn"
             class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-sm font-medium rounded-md">
             Add
@@ -328,11 +337,16 @@ document.getElementById("setBudgetBtn").onclick = async () => {
 document.getElementById("addTxBtn").onclick = async () => {
   const amount = document.getElementById("amountInput").value;
   const store = document.getElementById("storeInput").value || "Manual";
+  const category = document.getElementById("categoryInput").value || "Uncategorized";
 
-  await fetch(API + `/add_transaction/?amount=${encodeURIComponent(amount)}&store=${encodeURIComponent(store)}`, { method: "POST" });
+  await fetch(
+    API + `/add_transaction/?amount=${encodeURIComponent(amount)}&store=${encodeURIComponent(store)}&category=${encodeURIComponent(category)}`,
+    { method: "POST" }
+  );
 
   document.getElementById("amountInput").value = "";
   document.getElementById("storeInput").value = "";
+  document.getElementById("categoryInput").value = "";
 
   await refreshAll();
 };
@@ -359,9 +373,45 @@ document.getElementById("refreshAllBtn").onclick = refreshAll;
 document.getElementById("refreshTxBtn").onclick = loadTransactions;
 
 async function refreshAll() {
-  await Promise.all([loadBudget(), loadTransactions(), loadWeeklySummary(), loadWeeklyChart()]);
+  await Promise.all([
+    loadBudget(),
+    loadTransactions(),
+    loadWeeklySummary(),
+    loadWeeklyChart(),
+    loadTopStores()
+  ]);
 }
+async function loadTopStores() {
+  const res = await fetch(API + "/top_stores?limit=5");
+  const data = await res.json();
 
+  const list = document.getElementById("topStoresList");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  if (!Array.isArray(data) || data.length === 0) {
+    list.innerHTML = `<div class="text-slate-500 text-xs">No transactions yet.</div>`;
+    return;
+  }
+
+  data.forEach((item, i) => {
+    const row = document.createElement("div");
+    row.className = "flex items-center justify-between border border-slate-800 bg-slate-900 px-3 py-2";
+    row.innerHTML = `
+      <div class="flex items-center gap-2">
+        <span class="text-slate-500 text-xs w-5">${i + 1}.</span>
+        <span class="text-slate-200">${item.store}</span>
+      </div>
+      <span class="text-slate-100 font-medium">${money(item.spent)}</span>
+    `;
+    list.appendChild(row);
+  });
+
+  // Also set the top store label
+  document.getElementById("topStore").textContent =
+    `${data[0].store} (${money(data[0].spent)})`;
+}
 refreshAll();
 </script>
 </body>
