@@ -9,50 +9,57 @@
 </head>
 
 <body class="bg-slate-950 text-slate-100">
-  <div class="max-w-4xl mx-auto px-6 py-8">
+  <div class="max-w-6xl mx-auto px-6 py-8">
+
     <!-- Header -->
     <header class="flex items-start justify-between gap-4 mb-8">
       <div>
         <h1 class="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
-        <p class="text-slate-400 mt-1">Weekly budget with Gmail receipt sync</p>
+        <p class="text-slate-400 mt-1">Weekly budget + Gmail receipt sync</p>
       </div>
 
       <div class="flex items-center gap-2">
-        <a href="http://127.0.0.1:8000/gmail/login"
+        <a href="/gmail/login"
            class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-medium rounded-md">
           Connect Gmail
         </a>
         <button id="syncBtn"
-                class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-sm font-medium rounded-md border border-slate-700">
+                class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
           Sync
+        </button>
+        <button id="refreshAllBtn"
+                class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+          Refresh
         </button>
       </div>
     </header>
 
-    <!-- Top row: Summary + Chart -->
-    <section class="grid lg:grid-cols-3 gap-6 mb-8">
-      <!-- Summary (less clutter: one panel) -->
-      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-md p-5">
+    <!-- Top: Summary + Chart -->
+    <section class="grid lg:grid-cols-12 gap-6 mb-6">
+
+      <!-- Left: Summary -->
+      <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-md p-5">
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-medium text-slate-300">This Week</h2>
-          <button id="resetBtn" class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700">
-            Reset Week
+          <button id="resetBtn"
+                  class="text-xs px-2 py-1 bg-slate-950 hover:bg-slate-800 rounded-md border border-slate-800">
+            Reset
           </button>
         </div>
 
-        <div class="mt-4 space-y-3">
+        <div class="mt-5 space-y-4">
           <div class="flex items-baseline justify-between">
             <span class="text-slate-400 text-sm">Weekly Limit</span>
-            <span id="weeklyLimit" class="text-lg font-semibold">$—</span>
+            <span id="weeklyLimit" class="text-2xl font-semibold">$—</span>
           </div>
           <div class="flex items-baseline justify-between">
             <span class="text-slate-400 text-sm">Remaining</span>
-            <span id="remaining" class="text-lg font-semibold">$—</span>
+            <span id="remaining" class="text-2xl font-semibold">$—</span>
           </div>
 
-          <!-- Progress bar -->
-          <div class="pt-2">
-            <div class="h-2 w-full bg-slate-800 border border-slate-700 rounded-none">
+          <!-- Progress -->
+          <div>
+            <div class="h-2 w-full bg-slate-950 border border-slate-800">
               <div id="progressBar" class="h-2 bg-emerald-500" style="width:0%"></div>
             </div>
             <div class="flex justify-between mt-2">
@@ -61,12 +68,28 @@
             </div>
           </div>
 
-          <!-- Inline actions -->
+          <!-- Quick insights row (fills space) -->
+          <div class="grid grid-cols-3 gap-2 pt-2">
+            <div class="bg-slate-950 border border-slate-800 p-3">
+              <p class="text-xs text-slate-400">Spent</p>
+              <p id="weeklySpentSmall" class="text-lg font-semibold">$—</p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 p-3">
+              <p class="text-xs text-slate-400">Txns</p>
+              <p id="txnCount" class="text-lg font-semibold">—</p>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 p-3">
+              <p class="text-xs text-slate-400">Avg/day</p>
+              <p id="avgPerDay" class="text-lg font-semibold">$—</p>
+            </div>
+          </div>
+
+          <!-- Set budget -->
           <div class="pt-3 border-t border-slate-800">
             <label class="text-xs text-slate-400">Set weekly budget</label>
             <div class="flex gap-2 mt-2">
               <input id="budgetInput" type="number" step="0.01"
-                class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm outline-none focus:border-slate-600"
+                class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600"
                 placeholder="e.g. 200" />
               <button id="setBudgetBtn"
                 class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-sm font-medium rounded-md">
@@ -77,35 +100,50 @@
         </div>
       </div>
 
-      <!-- Chart -->
-      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-md p-5">
+      <!-- Right: Chart -->
+      <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-md p-5">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-medium text-slate-300">Spending (last 7 days)</h2>
-          <button id="refreshAllBtn" class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700">
-            Refresh
-          </button>
+          <div>
+            <h2 class="text-sm font-medium text-slate-300">Spending (last 7 days)</h2>
+            <p class="text-xs text-slate-500 mt-1">Shows totals per day</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-slate-400">Weekly spent</p>
+            <p id="weeklySpent" class="text-2xl font-semibold">$—</p>
+          </div>
         </div>
-        <div class="h-56">
+
+        <div class="h-64">
           <canvas id="spendChart"></canvas>
         </div>
-        <div class="mt-4 flex items-baseline justify-between">
-          <span class="text-slate-400 text-sm">Weekly spent</span>
-          <span id="weeklySpent" class="text-lg font-semibold">$—</span>
+
+        <!-- Adds more useful info under chart -->
+        <div class="grid sm:grid-cols-2 gap-3 mt-5">
+          <div class="bg-slate-950 border border-slate-800 p-4">
+            <p class="text-xs text-slate-400">Top store this week</p>
+            <p id="topStore" class="text-lg font-semibold mt-1">—</p>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-4">
+            <p class="text-xs text-slate-400">Next action</p>
+            <p id="nextAction" class="text-sm text-slate-200 mt-1">
+              Add a budget to start tracking.
+            </p>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Bottom: Add transaction + list -->
-    <section class="grid lg:grid-cols-3 gap-6">
+    <!-- Bottom: Add + Transactions (fills width, scrollable list) -->
+    <section class="grid lg:grid-cols-12 gap-6">
       <!-- Add transaction -->
-      <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-md p-5">
+      <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-md p-5">
         <h2 class="text-sm font-medium text-slate-300">Add transaction</h2>
         <div class="mt-4 space-y-2">
           <input id="amountInput" type="number" step="0.01"
-            class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm outline-none focus:border-slate-600"
+            class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600"
             placeholder="Amount" />
           <input id="storeInput" type="text"
-            class="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm outline-none focus:border-slate-600"
+            class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600"
             placeholder="Store (Amazon, Uber…)" />
           <button id="addTxBtn"
             class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-sm font-medium rounded-md">
@@ -113,46 +151,48 @@
           </button>
         </div>
         <p class="text-xs text-slate-500 mt-3">
-          Tip: use this for cash purchases; Gmail sync handles online receipts.
+          Tip: Use this for cash purchases. Gmail sync can import online receipts.
         </p>
       </div>
 
-      <!-- Transactions list -->
-      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-md p-5">
+      <!-- Transactions -->
+      <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-md p-5">
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-medium text-slate-300">Recent transactions</h2>
-          <button id="refreshTxBtn" class="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded-md border border-slate-700">
+          <button id="refreshTxBtn"
+                  class="text-xs px-2 py-1 bg-slate-950 hover:bg-slate-800 rounded-md border border-slate-800">
             Refresh
           </button>
         </div>
 
         <div class="mt-4 border border-slate-800">
-          <div class="grid grid-cols-3 text-xs text-slate-400 bg-slate-950 px-3 py-2 border-b border-slate-800">
-            <div>Store</div>
-            <div>Date</div>
-            <div class="text-right">Amount</div>
+          <div class="grid grid-cols-12 text-xs text-slate-400 bg-slate-950 px-3 py-2 border-b border-slate-800">
+            <div class="col-span-5">Store</div>
+            <div class="col-span-5">Date</div>
+            <div class="col-span-2 text-right">Amount</div>
           </div>
-          <div id="txList" class="divide-y divide-slate-800"></div>
+
+          <!-- Scrollable area -->
+          <div id="txList" class="max-h-72 overflow-auto divide-y divide-slate-800"></div>
         </div>
       </div>
     </section>
+
   </div>
 
 <script>
-const API = "";
+const API = ""; // same-origin on Render
 
 function money(n) {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return "$—";
   return "$" + Number(n).toFixed(2);
 }
-
 function fmtDate(iso) {
   if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleString();
+  return new Date(iso).toLocaleString();
 }
 
-// ----- Chart -----
+// Chart
 let chart;
 function renderChart(labels, values) {
   const ctx = document.getElementById("spendChart");
@@ -162,32 +202,27 @@ function renderChart(labels, values) {
     type: "bar",
     data: {
       labels,
-      datasets: [{
-        label: "Spent",
-        data: values
-      }]
+      datasets: [{ label: "Spent", data: values }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
+      plugins: { legend: { display: false } },
       scales: {
-        x: {
-          ticks: { color: "#cbd5e1" },
-          grid: { color: "rgba(148,163,184,0.15)" }
-        },
+        x: { ticks: { color: "#cbd5e1" }, grid: { color: "rgba(148,163,184,0.12)" } },
         y: {
-          ticks: { color: "#cbd5e1" },
-          grid: { color: "rgba(148,163,184,0.15)" }
+          beginAtZero: true,
+          ticks: {
+            color: "#cbd5e1",
+            callback: (value) => "$" + value
+          },
+          grid: { color: "rgba(148,163,184,0.12)" }
         }
       }
     }
   });
 }
 
-// ----- Loaders -----
 async function loadBudget() {
   const res = await fetch(API + "/budget");
   const data = await res.json();
@@ -214,6 +249,12 @@ async function loadBudget() {
   const lowWarn = document.getElementById("lowWarn");
   if (!status.error && status.low_budget) lowWarn.classList.remove("hidden");
   else lowWarn.classList.add("hidden");
+
+  // Next action text
+  const next = document.getElementById("nextAction");
+  if (weekly <= 0) next.textContent = "Set a weekly budget to start tracking.";
+  else if (status.low_budget) next.textContent = "You’re low—consider slowing spending or resetting next week.";
+  else next.textContent = "Sync Gmail receipts or add a manual transaction.";
 }
 
 async function loadTransactions() {
@@ -222,45 +263,58 @@ async function loadTransactions() {
   const list = document.getElementById("txList");
   list.innerHTML = "";
 
-  txs.slice(0, 15).forEach(t => {
+  document.getElementById("txnCount").textContent = txs.length;
+
+  txs.slice(0, 30).forEach(t => {
     const row = document.createElement("div");
-    row.className = "grid grid-cols-3 px-3 py-2 text-sm bg-slate-900";
+    row.className = "grid grid-cols-12 px-3 py-2 text-sm";
     row.innerHTML = `
-      <div class="truncate">${t.store}</div>
-      <div class="text-slate-400 text-xs">${fmtDate(t.created_at)}</div>
-      <div class="text-right font-medium">${money(t.amount)}</div>
+      <div class="col-span-5 truncate">${t.store}</div>
+      <div class="col-span-5 text-slate-400 text-xs">${fmtDate(t.created_at)}</div>
+      <div class="col-span-2 text-right font-medium">${money(t.amount)}</div>
     `;
     list.appendChild(row);
   });
 }
 
-async function loadWeeklyChart() {
-  // This endpoint we’ll add in FastAPI below
-  const res = await fetch(API + "/spending_by_day");
+async function loadWeeklySummary() {
+  const res = await fetch(API + "/weekly_summary");
   const data = await res.json();
+  if (data.error) return;
 
-  renderChart(data.labels, data.values);
-  document.getElementById("weeklySpent").textContent = money(data.total);
+  const spent = Number(data.weekly_spent || 0);
+  document.getElementById("weeklySpent").textContent = money(spent);
+  document.getElementById("weeklySpentSmall").textContent = money(spent);
+
+  // avg/day (simple)
+  document.getElementById("avgPerDay").textContent = money(spent / 7);
+
+  const top = (data.store_breakdown && data.store_breakdown.length > 0) ? data.store_breakdown[0] : null;
+  document.getElementById("topStore").textContent = top ? `${top.store} (${money(top.spent)})` : "—";
 }
 
-// ----- Actions -----
+async function loadWeeklyChart() {
+  const res = await fetch(API + "/spending_by_day");
+  const data = await res.json();
+  renderChart(data.labels, data.values);
+}
+
 document.getElementById("setBudgetBtn").onclick = async () => {
   const amount = document.getElementById("budgetInput").value;
   await fetch(API + `/set_budget/?amount=${encodeURIComponent(amount)}`, { method: "POST" });
-  await loadBudget();
+  await refreshAll();
 };
 
 document.getElementById("addTxBtn").onclick = async () => {
   const amount = document.getElementById("amountInput").value;
   const store = document.getElementById("storeInput").value || "Manual";
+
   await fetch(API + `/add_transaction/?amount=${encodeURIComponent(amount)}&store=${encodeURIComponent(store)}`, { method: "POST" });
 
   document.getElementById("amountInput").value = "";
   document.getElementById("storeInput").value = "";
 
-  await loadBudget();
-  await loadTransactions();
-  await loadWeeklyChart();
+  await refreshAll();
 };
 
 document.getElementById("syncBtn").onclick = async () => {
@@ -269,9 +323,7 @@ document.getElementById("syncBtn").onclick = async () => {
   btn.textContent = "Syncing...";
   try {
     await fetch(API + `/gmail/sync`, { method: "POST" });
-    await loadBudget();
-    await loadTransactions();
-    await loadWeeklyChart();
+    await refreshAll();
   } finally {
     btn.disabled = false;
     btn.textContent = "Sync";
@@ -280,22 +332,17 @@ document.getElementById("syncBtn").onclick = async () => {
 
 document.getElementById("resetBtn").onclick = async () => {
   await fetch(API + `/reset_week`, { method: "POST" });
-  await loadBudget();
-  await loadWeeklyChart();
+  await refreshAll();
 };
 
-document.getElementById("refreshAllBtn").onclick = async () => {
-  await loadBudget();
-  await loadTransactions();
-  await loadWeeklyChart();
-};
-
+document.getElementById("refreshAllBtn").onclick = refreshAll;
 document.getElementById("refreshTxBtn").onclick = loadTransactions;
 
-// Initial load
-loadBudget();
-loadTransactions();
-loadWeeklyChart();
+async function refreshAll() {
+  await Promise.all([loadBudget(), loadTransactions(), loadWeeklySummary(), loadWeeklyChart()]);
+}
+
+refreshAll();
 </script>
 </body>
 </html>

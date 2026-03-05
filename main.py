@@ -287,3 +287,23 @@ def gmail_sync(db: Session = Depends(get_db)):
         "emails_with_no_amount_found": no_amount,
         "remaining": budget.remaining,
     }
+@app.get("/spending_by_day")
+def spending_by_day(db: Session = Depends(get_db)):
+    today = datetime.utcnow().date()
+    start = today - timedelta(days=6)
+    start_dt = datetime(start.year, start.month, start.day)
+
+    txs = db.query(Transaction).filter(Transaction.created_at >= start_dt).all()
+
+    buckets = {(start + timedelta(days=i)).isoformat(): 0.0 for i in range(7)}
+    for t in txs:
+        d = t.created_at.date().isoformat()
+        if d in buckets:
+            buckets[d] += float(t.amount)
+
+    labels = list(buckets.keys())
+    values = [round(buckets[k], 2) for k in labels]
+    total = round(sum(values), 2)
+    short_labels = [l[5:] for l in labels]  # MM-DD
+
+    return {"labels": short_labels, "values": values, "total": total}
