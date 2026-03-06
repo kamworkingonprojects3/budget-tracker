@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from google.oauth2.credentials import Credentials
 from passlib.context import CryptContext
 
+import hashlib
 import json
 import os
 from urllib.parse import urlencode
@@ -50,6 +51,8 @@ app.add_middleware(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+# Optional static mount if you ever serve assets from /frontend/...
 app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
 
 
@@ -64,18 +67,25 @@ def get_db():
 
 # ---------------- Helpers ----------------
 def start_of_week_utc(dt: datetime) -> datetime:
-    """Return Monday 00:00:00 UTC of the week containing dt."""
+    """Return Monday 00:00:00 UTC for the week containing dt."""
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     else:
         dt = dt.astimezone(timezone.utc)
-
     monday = dt - timedelta(days=dt.weekday())
     return monday.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def iso(dt: datetime | None):
+def iso(dt: datetime | None) -> str | None:
     return dt.isoformat() if dt else None
+
+
+def normalize_password(password: str) -> str:
+    """
+    bcrypt only uses the first 72 bytes.
+    Pre-hash the password with SHA256 so any length works safely.
+    """
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def get_current_user(request: Request, db: Session) -> User:
@@ -106,16 +116,20 @@ def serve_insights():
 @app.post("/auth/signup")
 def signup(email: str, password: str, request: Request, db: Session = Depends(get_db)):
     email = (email or "").strip().lower()
+
     if not email or "@" not in email:
-        return {"error": "Invalid email"}
+        raise HTTPException(status_code=400, detail="Invalid email")
+
     if not password or len(password) < 6:
-        return {"error": "Password must be at least 6 characters"}
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
     existing = db.query(User).filter(User.email == email).first()
     if existing:
-        return {"error": "Email already exists"}
+        raise HTTPException(status_code=400, detail="Email already exists")
 
-    user = User(email=email, password_hash=pwd.hash(password))
+    pw_hash = pwd.hash(normalize_password(password))
+    user = User(email=email, password_hash=pw_hash)
+
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -127,9 +141,14 @@ def signup(email: str, password: str, request: Request, db: Session = Depends(ge
 @app.post("/auth/login")
 def login(email: str, password: str, request: Request, db: Session = Depends(get_db)):
     email = (email or "").strip().lower()
+
     user = db.query(User).filter(User.email == email).first()
-    if not user or not pwd.verify(password, user.password_hash):
-        return {"error": "Invalid email or password"}
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+
+    ok = pwd.verify(normalize_password(password), user.password_hash)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Invalid email or password")
 
     request.session["user_id"] = user.id
     return {"ok": True, "id": user.id, "email": user.email}
@@ -151,9 +170,11 @@ def me(request: Request, db: Session = Depends(get_db)):
 @app.get("/budget")
 def get_budget(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
+
     budget = db.query(Budget).filter(Budget.user_id == user.id).first()
     if not budget:
         return {"error": "No budget set yet. Use /set_budget first."}
+
     return {"weekly_limit": float(budget.weekly_limit), "remaining": float(budget.remaining)}
 
 
@@ -162,15 +183,15 @@ def set_budget(amount: float, request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
 
     if amount is None or amount <= 0:
-        return {"error": "Amount must be > 0"}
+        raise HTTPException(status_code=400, detail="Amount must be > 0")
 
     budget = db.query(Budget).filter(Budget.user_id == user.id).first()
     if budget is None:
-        budget = Budget(user_id=user.id, weekly_limit=amount, remaining=amount)
+        budget = Budget(user_id=user.id, weekly_limit=float(amount), remaining=float(amount))
         db.add(budget)
     else:
-        budget.weekly_limit = amount
-        budget.remaining = amount
+        budget.weekly_limit = float(amount)
+        budget.remaining = float(amount)
 
     db.commit()
     db.refresh(budget)
@@ -180,6 +201,7 @@ def set_budget(amount: float, request: Request, db: Session = Depends(get_db)):
 @app.get("/budget_status")
 def budget_status(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
+
     budget = db.query(Budget).filter(Budget.user_id == user.id).first()
     if not budget:
         return {"error": "No budget set yet. Use /set_budget first."}
@@ -199,11 +221,12 @@ def budget_status(request: Request, db: Session = Depends(get_db)):
 @app.post("/reset_week")
 def reset_week(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
+
     budget = db.query(Budget).filter(Budget.user_id == user.id).first()
     if not budget:
         return {"error": "No budget set yet. Use /set_budget first."}
 
-    budget.remaining = budget.weekly_limit
+    budget.remaining = float(budget.weekly_limit)
     db.commit()
     db.refresh(budget)
 
@@ -223,6 +246,10 @@ def add_transaction(
     request: Request = None,
     db: Session = Depends(get_db),
 ):
+    # FastAPI will always pass request, but keep this safe:
+    if request is None:
+        raise HTTPException(status_code=500, detail="Request missing")
+
     user = get_current_user(request, db)
 
     budget = db.query(Budget).filter(Budget.user_id == user.id).first()
@@ -230,7 +257,8 @@ def add_transaction(
         return {"error": "Set a budget first using /set_budget."}
 
     if amount is None or amount <= 0:
-        return {"error": "Amount must be > 0"}
+        raise HTTPException(status_code=400, detail="Amount must be > 0")
+
     if not store:
         store = "Manual"
 
@@ -238,6 +266,7 @@ def add_transaction(
     db.add(tx)
 
     budget.remaining = float(budget.remaining) - float(amount)
+
     db.commit()
     db.refresh(budget)
 
@@ -254,6 +283,7 @@ def list_transactions(request: Request, db: Session = Depends(get_db)):
         .order_by(Transaction.id.desc())
         .all()
     )
+
     return [
         {
             "id": t.id,
@@ -278,6 +308,7 @@ def weekly_summary(request: Request, db: Session = Depends(get_db)):
         .filter(Transaction.user_id == user.id, Transaction.created_at >= week_start)
         .all()
     )
+
     total_spent = sum(float(t.amount) for t in txs)
 
     store_totals: dict[str, float] = {}
@@ -324,8 +355,8 @@ def spending_by_day(request: Request, db: Session = Depends(get_db)):
     labels = list(buckets.keys())
     values = [round(buckets[k], 2) for k in labels]
     total = round(sum(values), 2)
-    short_labels = [l[5:] for l in labels]  # MM-DD
 
+    short_labels = [l[5:] for l in labels]  # MM-DD
     return {"labels": short_labels, "values": values, "total": total}
 
 
@@ -334,6 +365,7 @@ def top_stores(request: Request, db: Session = Depends(get_db), limit: int = 5):
     user = get_current_user(request, db)
 
     week_start = start_of_week_utc(datetime.now(timezone.utc))
+
     txs = (
         db.query(Transaction)
         .filter(Transaction.user_id == user.id, Transaction.created_at >= week_start)
@@ -349,14 +381,12 @@ def top_stores(request: Request, db: Session = Depends(get_db), limit: int = 5):
         key=lambda x: x["spent"],
         reverse=True,
     )
-
     return ranked[: max(1, int(limit))]
 
 
 # ---------------- Gmail OAuth (per-user) ----------------
 @app.get("/gmail/login")
 def gmail_login(request: Request, db: Session = Depends(get_db)):
-    # must be logged in
     _ = get_current_user(request, db)
 
     flow = make_flow()
@@ -378,15 +408,13 @@ def gmail_auth(request: Request, code: str, state: str, db: Session = Depends(ge
 
     saved_state = request.session.get("oauth_state")
     code_verifier = request.session.get("code_verifier")
-
     if not saved_state or state != saved_state:
-        return {"error": "OAuth state mismatch. Restart login at /gmail/login"}
+        raise HTTPException(status_code=400, detail="OAuth state mismatch. Restart login at /gmail/login")
 
     flow = make_flow()
     flow.fetch_token(code=code, code_verifier=code_verifier)
 
-    creds = flow.credentials
-    token_data = creds.to_json()
+    token_data = flow.credentials.to_json()
 
     existing = db.query(GmailToken).filter(GmailToken.user_id == user.id).first()
     if existing is None:
@@ -437,7 +465,6 @@ def gmail_sync(request: Request, db: Session = Depends(get_db)):
         snippet = get_message_snippet(service, msg_id)
         amount = extract_amount_from_text(snippet)
 
-        # always mark as processed for this user
         db.add(ProcessedEmail(user_id=user.id, gmail_message_id=msg_id))
 
         if amount is None:
@@ -467,6 +494,7 @@ def insights_data(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
 
     week_start = start_of_week_utc(datetime.now(timezone.utc))
+
     txs = (
         db.query(Transaction)
         .filter(Transaction.user_id == user.id, Transaction.created_at >= week_start)
@@ -498,12 +526,7 @@ def insights_data(request: Request, db: Session = Depends(get_db)):
 
     biggest_sorted = sorted(txs, key=lambda t: float(t.amount), reverse=True)[:10]
     biggest_txs = [
-        {
-            "id": t.id,
-            "store": t.store,
-            "amount": float(t.amount),
-            "created_at": iso(t.created_at),
-        }
+        {"id": t.id, "store": t.store, "amount": float(t.amount), "created_at": iso(t.created_at)}
         for t in biggest_sorted
     ]
 
