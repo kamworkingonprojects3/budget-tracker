@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, Request, HTTPException
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import RedirectResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from google.oauth2.credentials import Credentials
 from passlib.context import CryptContext
 
-import hashlib
 import json
 import os
 from urllib.parse import urlencode
@@ -26,15 +25,24 @@ from gmail_service import (
 
 # ---------------- App setup ----------------
 app = FastAPI()
+
+# Create tables
 Base.metadata.create_all(bind=engine)
 
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# ✅ Use PBKDF2 (reliable on Render, no bcrypt 72-byte issues)
+pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+# ✅ On Render you'll be HTTPS, locally you might be HTTP.
+IS_PROD = os.getenv("RENDER", "").lower() == "true" or os.getenv("ENV", "").lower() == "prod"
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key="65x23er",
+    secret_key=os.getenv("SESSION_SECRET", "65x23er"),
     same_site="lax",
-    https_only=True,
+    https_only=IS_PROD,  # only force HTTPS cookies in production
 )
 
 app.add_middleware(
@@ -49,11 +57,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-
-# Optional static mount if you ever serve assets from /frontend/...
+# Optional static mount
 app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+
+
+# ---------------- DEBUG: show real 500 error ----------------
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    # This will show you the crash reason instead of only "HTTP 500".
+    return JSONResponse(
+        status_code=500,
+        content={"error": "server_crash", "detail": str(exc), "path": str(request.url)},
+    )
 
 
 # ---------------- DB Dependency ----------------
@@ -78,14 +93,6 @@ def start_of_week_utc(dt: datetime) -> datetime:
 
 def iso(dt: datetime | None) -> str | None:
     return dt.isoformat() if dt else None
-
-
-def normalize_password(password: str) -> str:
-    """
-    bcrypt only uses the first 72 bytes.
-    Pre-hash the password with SHA256 so any length works safely.
-    """
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def get_current_user(request: Request, db: Session) -> User:
@@ -119,7 +126,6 @@ def signup(email: str, password: str, request: Request, db: Session = Depends(ge
 
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Invalid email")
-
     if not password or len(password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
 
@@ -127,9 +133,8 @@ def signup(email: str, password: str, request: Request, db: Session = Depends(ge
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
 
-    pw_hash = pwd.hash(normalize_password(password))
-    user = User(email=email, password_hash=pw_hash)
-
+    # ✅ PBKDF2 hash
+    user = User(email=email, password_hash=pwd.hash(password))
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -141,13 +146,9 @@ def signup(email: str, password: str, request: Request, db: Session = Depends(ge
 @app.post("/auth/login")
 def login(email: str, password: str, request: Request, db: Session = Depends(get_db)):
     email = (email or "").strip().lower()
-
     user = db.query(User).filter(User.email == email).first()
-    if not user:
-        raise HTTPException(status_code=400, detail="Invalid email or password")
 
-    ok = pwd.verify(normalize_password(password), user.password_hash)
-    if not ok:
+    if not user or not pwd.verify(password, user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
     request.session["user_id"] = user.id
@@ -246,10 +247,6 @@ def add_transaction(
     category: str = "Uncategorized",
     db: Session = Depends(get_db),
 ):
-    # FastAPI will always pass request, but keep this safe:
-    if request is None:
-        raise HTTPException(status_code=500, detail="Request missing")
-
     user = get_current_user(request, db)
 
     budget = db.query(Budget).filter(Budget.user_id == user.id).first()
@@ -258,7 +255,6 @@ def add_transaction(
 
     if amount is None or amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be > 0")
-
     if not store:
         store = "Manual"
 
@@ -300,8 +296,7 @@ def list_transactions(request: Request, db: Session = Depends(get_db)):
 def weekly_summary(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
 
-    now = datetime.now(timezone.utc)
-    week_start = start_of_week_utc(now)
+    week_start = start_of_week_utc(datetime.now(timezone.utc))
 
     txs = (
         db.query(Transaction)
@@ -381,6 +376,7 @@ def top_stores(request: Request, db: Session = Depends(get_db), limit: int = 5):
         key=lambda x: x["spent"],
         reverse=True,
     )
+
     return ranked[: max(1, int(limit))]
 
 
@@ -398,7 +394,6 @@ def gmail_login(request: Request, db: Session = Depends(get_db)):
 
     request.session["oauth_state"] = state
     request.session["code_verifier"] = getattr(flow, "code_verifier", None)
-
     return RedirectResponse(auth_url)
 
 
@@ -413,7 +408,6 @@ def gmail_auth(request: Request, code: str, state: str, db: Session = Depends(ge
 
     flow = make_flow()
     flow.fetch_token(code=code, code_verifier=code_verifier)
-
     token_data = flow.credentials.to_json()
 
     existing = db.query(GmailToken).filter(GmailToken.user_id == user.id).first()
