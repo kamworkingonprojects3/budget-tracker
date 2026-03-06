@@ -10,6 +10,7 @@ from passlib.context import CryptContext
 
 import json
 import os
+import traceback
 from urllib.parse import urlencode
 from datetime import datetime, timedelta, timezone
 
@@ -29,20 +30,20 @@ app = FastAPI()
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-# ✅ Use PBKDF2 (reliable on Render, no bcrypt 72-byte issues)
+# ✅ PBKDF2 (no bcrypt 72-byte issue)
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
-# ✅ On Render you'll be HTTPS, locally you might be HTTP.
+# ✅ Render sets RENDER="true" for services
 IS_PROD = os.getenv("RENDER", "").lower() == "true" or os.getenv("ENV", "").lower() == "prod"
 
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SESSION_SECRET", "65x23er"),
     same_site="lax",
-    https_only=IS_PROD,  # only force HTTPS cookies in production
+    https_only=IS_PROD,  # only force secure cookies in prod
 )
 
 app.add_middleware(
@@ -61,13 +62,19 @@ app.add_middleware(
 app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
 
 
-# ---------------- DEBUG: show real 500 error ----------------
+# ---------------- DEBUG: show real 500 error + print traceback ----------------
 @app.exception_handler(Exception)
 async def debug_exception_handler(request: Request, exc: Exception):
-    # This will show you the crash reason instead of only "HTTP 500".
+    print("\n🔥 UNHANDLED ERROR:", repr(exc))
+    traceback.print_exc()
+
     return JSONResponse(
         status_code=500,
-        content={"error": "server_crash", "detail": str(exc), "path": str(request.url)},
+        content={
+            "error": "server_crash",
+            "detail": str(exc),
+            "path": str(request.url),
+        },
     )
 
 
@@ -133,7 +140,6 @@ def signup(email: str, password: str, request: Request, db: Session = Depends(ge
     if existing:
         raise HTTPException(status_code=400, detail="Email already exists")
 
-    # ✅ PBKDF2 hash
     user = User(email=email, password_hash=pwd.hash(password))
     db.add(user)
     db.commit()
@@ -383,18 +389,31 @@ def top_stores(request: Request, db: Session = Depends(get_db), limit: int = 5):
 # ---------------- Gmail OAuth (per-user) ----------------
 @app.get("/gmail/login")
 def gmail_login(request: Request, db: Session = Depends(get_db)):
-    _ = get_current_user(request, db)
+    user = get_current_user(request, db)
 
-    flow = make_flow()
-    auth_url, state = flow.authorization_url(
-        access_type="offline",
-        prompt="consent",
-        include_granted_scopes="true",
-    )
+    try:
+        flow = make_flow()
+        auth_url, state = flow.authorization_url(
+            access_type="offline",
+            prompt="consent",
+            include_granted_scopes="true",
+        )
 
-    request.session["oauth_state"] = state
-    request.session["code_verifier"] = getattr(flow, "code_verifier", None)
-    return RedirectResponse(auth_url)
+        request.session["oauth_state"] = state
+        request.session["code_verifier"] = getattr(flow, "code_verifier", None)
+
+        print("✅ /gmail/login created session", {
+            "user_id": user.id,
+            "state": state,
+            "has_code_verifier": bool(request.session.get("code_verifier")),
+        })
+
+        return RedirectResponse(auth_url)
+
+    except Exception as e:
+        print("❌ /gmail/login error:", repr(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"gmail_login failed: {e}")
 
 
 @app.get("/gmail/auth")
@@ -403,12 +422,32 @@ def gmail_auth(request: Request, code: str, state: str, db: Session = Depends(ge
 
     saved_state = request.session.get("oauth_state")
     code_verifier = request.session.get("code_verifier")
-    if not saved_state or state != saved_state:
+
+    print("➡️ /gmail/auth received", {
+        "user_id": user.id,
+        "state_from_google": state,
+        "saved_state": saved_state,
+        "has_code_verifier": bool(code_verifier),
+        "has_code": bool(code),
+    })
+
+    if not saved_state:
+        raise HTTPException(
+            status_code=400,
+            detail="Missing oauth_state in session. Session cookie likely not saved/sent.",
+        )
+
+    if state != saved_state:
         raise HTTPException(status_code=400, detail="OAuth state mismatch. Restart login at /gmail/login")
 
-    flow = make_flow()
-    flow.fetch_token(code=code, code_verifier=code_verifier)
-    token_data = flow.credentials.to_json()
+    try:
+        flow = make_flow()
+        flow.fetch_token(code=code, code_verifier=code_verifier)
+        token_data = flow.credentials.to_json()
+    except Exception as e:
+        print("❌ Token exchange failed:", repr(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=f"Token exchange failed: {e}")
 
     existing = db.query(GmailToken).filter(GmailToken.user_id == user.id).first()
     if existing is None:
