@@ -240,10 +240,10 @@ def reset_week(request: Request, db: Session = Depends(get_db)):
 # ---------------- Transactions (per-user) ----------------
 @app.post("/add_transaction")
 def add_transaction(
+    request: Request,
     amount: float,
     store: str,
     category: str = "Uncategorized",
-    request: Request = None,
     db: Session = Depends(get_db),
 ):
     # FastAPI will always pass request, but keep this safe:
