@@ -15,7 +15,7 @@ import os
 import traceback
 from urllib.parse import urlencode
 from datetime import datetime, timedelta, timezone
-
+from sqlalchemy import text
 import stripe
 
 from database import engine, SessionLocal
@@ -33,6 +33,21 @@ app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
 
+with engine.connect() as conn:
+    try:
+        conn.execute(text("""
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS premium BOOLEAN NOT NULL DEFAULT FALSE
+        """))
+        conn.execute(text("""
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        """))
+        conn.commit()
+        print("✅ Database schema patched")
+    except Exception as e:
+        print("DB patch skipped:", e)
+        
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
