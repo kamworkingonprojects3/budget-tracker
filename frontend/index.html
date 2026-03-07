@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Budget Tracker</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="bg-slate-950 text-slate-100">
+
+<!-- AUTH MODAL -->
+<div id="authModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-50">
+  <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6">
+    <div class="flex items-start justify-between">
+      <div>
+        <h2 class="text-xl font-semibold">Sign in</h2>
+        <p class="text-sm text-slate-400 mt-1">Create an account or log in to access your budget.</p>
+      </div>
+      <button id="authCloseBtn" class="text-slate-400 hover:text-slate-200">✕</button>
+    </div>
+
+    <div class="mt-5 space-y-3">
+      <div>
+        <label class="text-xs text-slate-400">Email</label>
+        <input id="authEmail" type="email"
+               class="mt-1 w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+               placeholder="you@email.com" />
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400">Password</label>
+        <input id="authPassword" type="password"
+               class="mt-1 w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+               placeholder="at least 6 characters" />
+      </div>
+
+      <div id="authError" class="hidden text-sm text-red-300 bg-red-900/20 border border-red-900/40 px-3 py-2 rounded">
+        Error
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button id="signupBtn"
+                class="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-sm font-medium rounded-md">
+          Sign up
+        </button>
+        <button id="loginBtn"
+                class="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-medium rounded-md">
+          Log in
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 mt-2">
+        Demo login only. Don’t reuse an important password.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-6 py-8">
+
+<!-- HEADER -->
+<header class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-8">
+  <div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <h1 class="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
+      <span id="premiumBadge" class="hidden px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+        Premium
+      </span>
+    </div>
+    <p class="text-slate-400 mt-1">Weekly budget + Gmail receipt sync</p>
+    <p id="userLine" class="text-xs text-slate-500 mt-2 hidden"></p>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-3">
+    <!-- TABS -->
+    <nav class="flex items-center border border-slate-800 bg-slate-900 rounded-md overflow-hidden">
+      <a href="/" id="tabDashboard"
+         class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800">
+        Dashboard
+      </a>
+      <a href="/insights" id="tabInsights"
+         class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800">
+        Insights
+      </a>
+      <a href="/ai-analysis" id="tabAI"
+         class="px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800">
+        AI Analysis
+      </a>
+    </nav>
+
+    <!-- ACTIONS -->
+    <button id="upgradeBtn"
+      class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold rounded-md hidden">
+      Upgrade $4/mo
+    </button>
+
+    <a href="/gmail/login"
+       class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-medium rounded-md">
+      Connect Gmail
+    </a>
+
+    <button id="syncBtn"
+      class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+      Sync
+    </button>
+
+    <button id="refreshAllBtn"
+      class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+      Refresh
+    </button>
+
+    <button id="logoutBtn"
+      class="px-3 py-2 bg-slate-950 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+      Log out
+    </button>
+  </div>
+</header>
+
+<div id="banner" class="hidden mb-6 border border-slate-800 bg-slate-900 px-4 py-3 text-sm rounded-md">
+  <span id="bannerText"></span>
+</div>
+
+<!-- PREMIUM PROMO -->
+<section id="premiumPromo" class="hidden mb-6 border border-amber-500/20 bg-amber-500/5 rounded-xl p-5">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-semibold text-amber-300">Unlock Premium AI Insights</h2>
+      <p class="text-sm text-slate-300 mt-1">
+        Find hidden subscriptions, get AI spending summaries, and spot where your money is going.
+      </p>
+      <div class="mt-3 flex flex-wrap gap-2 text-xs">
+        <span class="px-2 py-1 rounded-full bg-slate-900 border border-slate-800">AI spending analysis</span>
+        <span class="px-2 py-1 rounded-full bg-slate-900 border border-slate-800">Recurring subscription detection</span>
+        <span class="px-2 py-1 rounded-full bg-slate-900 border border-slate-800">Smart savings tips</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <div class="text-right">
+        <p class="text-xs text-slate-400">Premium</p>
+        <p class="text-2xl font-bold text-amber-300">$4/mo</p>
+      </div>
+      <button id="promoUpgradeBtn"
+        class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold rounded-md">
+        Upgrade
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- TOP SECTION -->
+<section class="grid lg:grid-cols-12 gap-6 mb-6">
+  <!-- LEFT PANEL -->
+  <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-medium text-slate-300">This Week</h2>
+      <button id="resetBtn"
+        class="text-xs px-2 py-1 bg-slate-950 hover:bg-slate-800 rounded-md border border-slate-800">
+        Reset
+      </button>
+    </div>
+
+    <div class="mt-5 space-y-4">
+      <div class="flex items-baseline justify-between">
+        <span class="text-slate-400 text-sm">Weekly Limit</span>
+        <span id="weeklyLimit" class="text-2xl font-semibold">$—</span>
+      </div>
+
+      <div class="flex items-baseline justify-between">
+        <span class="text-slate-400 text-sm">Remaining</span>
+        <span id="remaining" class="text-2xl font-semibold">$—</span>
+      </div>
+
+      <div>
+        <div class="h-2 w-full bg-slate-950 border border-slate-800 rounded-full overflow-hidden">
+          <div id="progressBar" class="h-2 bg-emerald-500" style="width:0%"></div>
+        </div>
+
+        <div class="flex justify-between mt-2">
+          <p id="progressText" class="text-xs text-slate-400">0% used</p>
+          <p id="lowWarn" class="text-xs text-red-400 hidden">Low budget</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 pt-2">
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg">
+          <p class="text-xs text-slate-400">Spent</p>
+          <p id="weeklySpentSmall" class="text-lg font-semibold">$—</p>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg">
+          <p class="text-xs text-slate-400">Txns</p>
+          <p id="txnCount" class="text-lg font-semibold">—</p>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg">
+          <p class="text-xs text-slate-400">Avg/day</p>
+          <p id="avgPerDay" class="text-lg font-semibold">$—</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 p-4 rounded-lg">
+        <p class="text-xs text-slate-400">Top stores this week</p>
+        <p id="topStore" class="text-lg font-semibold mt-1 break-words">—</p>
+        <div id="topStoresList" class="mt-3 space-y-2 text-sm"></div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <label class="text-xs text-slate-400">Set weekly budget</label>
+        <div class="flex gap-2 mt-2">
+          <input id="budgetInput" type="number" step="0.01"
+                 class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+                 placeholder="e.g. 200" />
+          <button id="setBudgetBtn"
+                  class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-sm font-medium rounded-md">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART PANEL -->
+  <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div class="flex items-center justify-between mb-4 gap-4">
+      <div>
+        <h2 class="text-sm font-medium text-slate-300">Spending (last 7 days)</h2>
+        <p class="text-xs text-slate-500 mt-1">Shows totals per day</p>
+      </div>
+      <div class="text-right shrink-0">
+        <p class="text-xs text-slate-400">Weekly spent</p>
+        <p id="weeklySpent" class="text-2xl font-semibold">$—</p>
+      </div>
+    </div>
+
+    <div class="h-72">
+      <canvas id="spendChart"></canvas>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-3 mt-5">
+      <div class="bg-slate-950 border border-slate-800 p-4 rounded-lg min-w-0">
+        <p class="text-xs text-slate-400">Top store this week</p>
+        <p id="topStoreChart" class="text-lg font-semibold mt-1 break-words">—</p>
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 p-4 rounded-lg">
+        <p class="text-xs text-slate-400">Next action</p>
+        <p id="nextAction" class="text-sm text-slate-200 mt-1">
+          Add a budget to start tracking.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ADD TRANSACTION + TX LIST -->
+<section class="grid lg:grid-cols-12 gap-6">
+  <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <h2 class="text-sm font-medium text-slate-300">Add transaction</h2>
+    <div class="mt-4 space-y-2">
+      <input id="amountInput" type="number" step="0.01"
+             class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+             placeholder="Amount"/>
+
+      <input id="storeInput" type="text"
+             class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+             placeholder="Store"/>
+
+      <input id="categoryInput" type="text"
+             class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+             placeholder="Category"/>
+
+      <button id="addTxBtn"
+              class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-500 text-sm font-medium rounded-md">
+        Add
+      </button>
+    </div>
+  </div>
+
+  <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-medium text-slate-300">Recent transactions</h2>
+      <button id="refreshTxBtn"
+              class="text-xs px-2 py-1 bg-slate-950 hover:bg-slate-800 rounded-md border border-slate-800">
+        Refresh
+      </button>
+    </div>
+
+    <div class="mt-4 border border-slate-800 rounded-lg overflow-hidden">
+      <div class="grid grid-cols-12 text-xs text-slate-400 bg-slate-950 px-3 py-2 border-b border-slate-800">
+        <div class="col-span-5">Store</div>
+        <div class="col-span-5">Date</div>
+        <div class="col-span-2 text-right">Amount</div>
+      </div>
+
+      <div id="txList" class="max-h-72 overflow-auto divide-y divide-slate-800"></div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+const API = "";
+let currentUser = null;
+let isPremium = false;
+
+const path = window.location.pathname;
+if (path === "/") document.getElementById("tabDashboard")?.classList.add("bg-slate-800");
+if (path === "/insights") document.getElementById("tabInsights")?.classList.add("bg-slate-800");
+if (path === "/ai-analysis") document.getElementById("tabAI")?.classList.add("bg-slate-800");
+
+function money(n) {
+  if (n === null || n === undefined || Number.isNaN(Number(n))) return "$—";
+  return "$" + Number(n).toFixed(2);
+}
+
+function fmtDate(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleString();
+}
+
+function showBanner(text) {
+  const b = document.getElementById("banner");
+  const t = document.getElementById("bannerText");
+  if (!b || !t) return;
+  t.textContent = text;
+  b.classList.remove("hidden");
+  setTimeout(() => b.classList.add("hidden"), 4000);
+}
+
+function showAuthError(msg) {
+  const box = document.getElementById("authError");
+  box.textContent = msg;
+  box.classList.remove("hidden");
+}
+
+function openAuthModal() {
+  document.getElementById("authError").classList.add("hidden");
+  document.getElementById("authModal").classList.remove("hidden");
+  document.getElementById("authModal").classList.add("flex");
+  document.getElementById("authEmail").focus();
+}
+
+function closeAuthModal() {
+  document.getElementById("authModal").classList.add("hidden");
+  document.getElementById("authModal").classList.remove("flex");
+}
+
+async function apiText(res) {
+  try { return await res.text(); } catch { return ""; }
+}
+
+function updatePremiumUI() {
+  const premiumBadge = document.getElementById("premiumBadge");
+  const upgradeBtn = document.getElementById("upgradeBtn");
+  const promo = document.getElementById("premiumPromo");
+  const aiTab = document.getElementById("tabAI");
+
+  if (isPremium) {
+    premiumBadge?.classList.remove("hidden");
+    upgradeBtn?.classList.add("hidden");
+    promo?.classList.add("hidden");
+    aiTab.textContent = "AI Analysis";
+  } else {
+    premiumBadge?.classList.add("hidden");
+    upgradeBtn?.classList.remove("hidden");
+    promo?.classList.remove("hidden");
+    aiTab.textContent = "AI Analysis 🔒";
+  }
+}
+
+async function ensureLoggedIn() {
+  const res = await fetch(API + "/auth/me", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (res.ok) {
+    const me = await res.json();
+    currentUser = me;
+    isPremium = !!me.premium;
+
+    const line = document.getElementById("userLine");
+    line.textContent = "Signed in as: " + me.email;
+    line.classList.remove("hidden");
+
+    updatePremiumUI();
+    return true;
+  }
+
+  openAuthModal();
+  return false;
+}
+
+// Handle URL banners
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("gmail") === "connected") {
+  showBanner("Gmail connected ✅");
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+if (urlParams.get("upgraded") === "true") {
+  showBanner("Premium unlocked ✅");
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+if (urlParams.get("checkout") === "cancelled") {
+  showBanner("Checkout cancelled.");
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+// Chart
+let chart;
+function renderChart(labels, values) {
+  const ctx = document.getElementById("spendChart");
+  if (!ctx) return;
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Spent",
+        data: values,
+        borderRadius: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: "#cbd5e1" },
+          grid: { color: "rgba(148,163,184,0.12)" }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: "#cbd5e1",
+            callback: (v) => "$" + v
+          },
+          grid: { color: "rgba(148,163,184,0.12)" }
+        }
+      }
+    }
+  });
+}
+
+// API loaders
+async function loadBudget() {
+  const res = await fetch(API + "/budget", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (res.status === 401) { openAuthModal(); return; }
+  if (!res.ok) return;
+
+  const data = await res.json();
+  if (data.error) return;
+
+  const weekly = Number(data.weekly_limit || 0);
+  const remaining = Number(data.remaining || 0);
+  const usedPct = weekly > 0 ? ((weekly - remaining) / weekly) * 100 : 0;
+
+  document.getElementById("weeklyLimit").textContent = money(weekly);
+  document.getElementById("remaining").textContent = money(remaining);
+
+  const bar = document.getElementById("progressBar");
+  bar.style.width = `${Math.min(100, Math.max(0, usedPct))}%`;
+  bar.classList.remove("bg-emerald-500", "bg-yellow-500", "bg-red-500");
+
+  if (usedPct >= 90) bar.classList.add("bg-red-500");
+  else if (usedPct >= 75) bar.classList.add("bg-yellow-500");
+  else bar.classList.add("bg-emerald-500");
+
+  document.getElementById("progressText").textContent = `${usedPct.toFixed(1)}% used`;
+
+  const statusRes = await fetch(API + "/budget_status", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (statusRes.ok) {
+    const status = await statusRes.json();
+    const lowWarn = document.getElementById("lowWarn");
+
+    if (!status.error && status.low_budget) lowWarn.classList.remove("hidden");
+    else lowWarn.classList.add("hidden");
+
+    const next = document.getElementById("nextAction");
+    if (weekly <= 0) next.textContent = "Set a weekly budget to start tracking.";
+    else if (!status.error && status.low_budget) next.textContent = "You’re low on budget. Slow spending or reset next week.";
+    else next.textContent = "Sync Gmail receipts or add a manual transaction.";
+  }
+}
+
+async function loadTransactions() {
+  const res = await fetch(API + "/transactions", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (res.status === 401) { openAuthModal(); return; }
+  if (!res.ok) return;
+
+  const txs = await res.json();
+  const list = document.getElementById("txList");
+  list.innerHTML = "";
+
+  document.getElementById("txnCount").textContent = Array.isArray(txs) ? txs.length : "—";
+
+  (txs || []).slice(0, 30).forEach((t) => {
+    const row = document.createElement("div");
+    row.className = "grid grid-cols-12 px-3 py-2 text-sm";
+    row.innerHTML = `
+      <div class="col-span-5 truncate pr-2">${t.store ?? "—"}</div>
+      <div class="col-span-5 text-slate-400 text-xs pr-2">${fmtDate(t.created_at)}</div>
+      <div class="col-span-2 text-right font-medium">${money(t.amount)}</div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+async function loadWeeklySummary() {
+  const res = await fetch(API + "/weekly_summary", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (res.status === 401) { openAuthModal(); return; }
+  if (!res.ok) return;
+
+  const data = await res.json();
+  if (data.error) return;
+
+  const spent = Number(data.weekly_spent || 0);
+  document.getElementById("weeklySpent").textContent = money(spent);
+  document.getElementById("weeklySpentSmall").textContent = money(spent);
+  document.getElementById("avgPerDay").textContent = money(spent / 7);
+
+  const top = (data.store_breakdown && data.store_breakdown.length > 0) ? data.store_breakdown[0] : null;
+  const topText = top ? `${top.store} (${money(top.spent)})` : "—";
+  document.getElementById("topStore").textContent = topText;
+  document.getElementById("topStoreChart").textContent = topText;
+}
+
+async function loadWeeklyChart() {
+  const res = await fetch(API + "/spending_by_day", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (res.status === 401) { openAuthModal(); return; }
+  if (!res.ok) return;
+
+  const data = await res.json();
+  if (!Array.isArray(data.labels) || !Array.isArray(data.values)) return;
+  renderChart(data.labels, data.values);
+}
+
+async function loadTopStores() {
+  const res = await fetch(API + "/top_stores?limit=5", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (res.status === 401) { openAuthModal(); return; }
+  if (!res.ok) return;
+
+  const data = await res.json();
+  const list = document.getElementById("topStoresList");
+  list.innerHTML = "";
+
+  if (!Array.isArray(data) || data.length === 0) {
+    list.innerHTML = `<div class="text-slate-500 text-xs">No transactions yet.</div>`;
+    return;
+  }
+
+  data.forEach((item, i) => {
+    const row = document.createElement("div");
+    row.className = "flex items-center justify-between gap-3 border border-slate-800 bg-slate-900 px-3 py-2 rounded-md";
+    row.innerHTML = `
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-slate-500 text-xs w-5 shrink-0">${i + 1}.</span>
+        <span class="text-slate-200 truncate">${item.store}</span>
+      </div>
+      <span class="text-slate-100 font-medium shrink-0">${money(item.spent)}</span>
+    `;
+    list.appendChild(row);
+  });
+
+  const topStoreText = `${data[0].store} (${money(data[0].spent)})`;
+  document.getElementById("topStore").textContent = topStoreText;
+  document.getElementById("topStoreChart").textContent = topStoreText;
+}
+
+async function refreshAll() {
+  await Promise.allSettled([
+    loadBudget(),
+    loadTransactions(),
+    loadWeeklySummary(),
+    loadWeeklyChart(),
+    loadTopStores()
+  ]);
+}
+
+// Buttons
+document.getElementById("setBudgetBtn").onclick = async () => {
+  const amount = document.getElementById("budgetInput").value;
+  if (!amount || Number(amount) <= 0) {
+    alert("Enter a valid budget amount.");
+    return;
+  }
+
+  const res = await fetch(API + `/set_budget?amount=${encodeURIComponent(amount)}`, {
+    method: "POST",
+    credentials: "include"
+  });
+
+  if (res.status === 401) { openAuthModal(); return; }
+  if (!res.ok) {
+    alert("Failed to save budget.\nHTTP " + res.status + "\n" + await apiText(res));
+    return;
+  }
+
+  document.getElementById("budgetInput").value = "";
+  await refreshAll();
+};
+
+document.getElementById("addTxBtn").onclick = async () => {
+  const amount = document.getElementById("amountInput").value;
+  const store = document.getElementById("storeInput").value || "Manual";
+  const category = document.getElementById("categoryInput").value || "Uncategorized";
+
+  if (!amount || Number(amount) <= 0) {
+    alert("Enter a valid transaction amount.");
+    return;
+  }
+
+  const res = await fetch(
+    API + `/add_transaction?amount=${encodeURIComponent(amount)}&store=${encodeURIComponent(store)}&category=${encodeURIComponent(category)}`,
+    {
+      method: "POST",
+      credentials: "include"
+    }
+  );
+
+  if (res.status === 401) { openAuthModal(); return; }
+  if (!res.ok) {
+    alert("Failed to add transaction.\nHTTP " + res.status + "\n" + await apiText(res));
+    return;
+  }
+
+  document.getElementById("amountInput").value = "";
+  document.getElementById("storeInput").value = "";
+  document.getElementById("categoryInput").value = "";
+  await refreshAll();
+};
+
+document.getElementById("syncBtn").onclick = async () => {
+  const btn = document.getElementById("syncBtn");
+  btn.disabled = true;
+  btn.textContent = "Syncing...";
+
+  try {
+    const res = await fetch(API + "/gmail/sync", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    if (res.status === 401) { openAuthModal(); return; }
+    if (!res.ok) {
+      alert("Sync failed.\nHTTP " + res.status + "\n" + await apiText(res));
+      return;
+    }
+
+    showBanner("Gmail synced ✅");
+    await refreshAll();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Sync";
+  }
+};
+
+document.getElementById("resetBtn").onclick = async () => {
+  const res = await fetch(API + "/reset_week", {
+    method: "POST",
+    credentials: "include"
+  });
+
+  if (res.status === 401) { openAuthModal(); return; }
+  if (!res.ok) {
+    alert("Reset failed.\nHTTP " + res.status + "\n" + await apiText(res));
+    return;
+  }
+
+  await refreshAll();
+};
+
+document.getElementById("refreshAllBtn").onclick = refreshAll;
+document.getElementById("refreshTxBtn").onclick = loadTransactions;
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await fetch(API + "/auth/logout", {
+    method: "POST",
+    credentials: "include"
+  });
+  location.reload();
+};
+
+document.getElementById("upgradeBtn").onclick = () => {
+  window.location.href = "/create-checkout-session";
+};
+
+document.getElementById("promoUpgradeBtn").onclick = () => {
+  window.location.href = "/create-checkout-session";
+};
+
+document.getElementById("tabAI").onclick = (e) => {
+  if (!isPremium) {
+    e.preventDefault();
+    showBanner("Upgrade to Premium to unlock AI Analysis.");
+  }
+};
+
+// Modal controls
+document.getElementById("authCloseBtn").onclick = () => closeAuthModal();
+document.getElementById("authModal").addEventListener("click", (e) => {
+  if (e.target.id === "authModal") closeAuthModal();
+});
+
+document.getElementById("signupBtn").onclick = async () => {
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  if (!email || !password) return showAuthError("Enter email and password.");
+
+  const res = await fetch(
+    API + `/auth/signup?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+    {
+      method: "POST",
+      credentials: "include"
+    }
+  );
+
+  const text = await apiText(res);
+  let data = {};
+  try { data = JSON.parse(text); } catch {}
+
+  if (!res.ok || data.error) return showAuthError(data.error || ("HTTP " + res.status));
+
+  closeAuthModal();
+  showBanner("Account created ✅");
+  await ensureLoggedIn();
+  await refreshAll();
+};
+
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  if (!email || !password) return showAuthError("Enter email and password.");
+
+  const res = await fetch(
+    API + `/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+    {
+      method: "POST",
+      credentials: "include"
+    }
+  );
+
+  const text = await apiText(res);
+  let data = {};
+  try { data = JSON.parse(text); } catch {}
+
+  if (!res.ok || data.error) return showAuthError(data.error || ("HTTP " + res.status));
+
+  closeAuthModal();
+  showBanner("Logged in ✅");
+  await ensureLoggedIn();
+  await refreshAll();
+};
+
+// Boot
+(async () => {
+  const ok = await ensureLoggedIn();
+  if (ok) await refreshAll();
+})();
+</script>
+
+</body>
+</html>

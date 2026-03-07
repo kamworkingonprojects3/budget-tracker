@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Analysis</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100">
+  <div class="max-w-6xl mx-auto px-6 py-8">
+    <header class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-semibold">AI Analysis</h1>
+        <p class="text-slate-400 mt-1">Premium financial insights powered by your transaction history</p>
+      </div>
+      <nav class="flex items-center border border-slate-800 bg-slate-900 rounded-md overflow-hidden">
+        <a href="/" class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800">Dashboard</a>
+        <a href="/insights" class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800">Insights</a>
+        <a href="/ai-analysis" class="px-4 py-2 text-sm font-medium text-slate-200 bg-slate-800">AI Analysis</a>
+      </nav>
+    </header>
+
+    <div id="loading" class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+      Loading AI analysis...
+    </div>
+
+    <div id="analysisWrap" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <p class="text-xs text-slate-400 mb-2">Summary</p>
+        <p id="summaryText" class="text-lg text-slate-100"></p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <p class="text-xs text-slate-400">Weekly total</p>
+          <p id="weeklyTotal" class="text-2xl font-semibold mt-1">$—</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <p class="text-xs text-slate-400">Top category</p>
+          <p id="topCategory" class="text-lg font-semibold mt-1">—</p>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <p class="text-xs text-slate-400">Top store</p>
+          <p id="topStore" class="text-lg font-semibold mt-1">—</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <p class="text-sm font-medium text-slate-300 mb-4">Possible subscriptions</p>
+        <div id="subscriptionsList" class="space-y-3"></div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6">
+        <p class="text-sm font-medium text-slate-300 mb-4">Savings tips</p>
+        <div id="tipsList" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+function money(n) {
+  if (n === null || n === undefined || Number.isNaN(Number(n))) return "$—";
+  return "$" + Number(n).toFixed(2);
+}
+
+async function loadAnalysis() {
+  const res = await fetch("/api/ai-analysis", {
+    credentials: "include",
+    cache: "no-store"
+  });
+
+  if (!res.ok) {
+    document.getElementById("loading").innerHTML = `
+      <p class="text-red-300">Could not load AI analysis.</p>
+      <p class="text-slate-400 text-sm mt-2">You may need Premium access.</p>
+    `;
+    return;
+  }
+
+  const data = await res.json();
+
+  document.getElementById("summaryText").textContent = data.summary || "No summary yet.";
+  document.getElementById("weeklyTotal").textContent = money(data.weekly_total);
+  document.getElementById("topCategory").textContent = data.top_category
+    ? `${data.top_category.name} (${money(data.top_category.amount)})`
+    : "—";
+  document.getElementById("topStore").textContent = data.top_store
+    ? `${data.top_store.name} (${money(data.top_store.amount)})`
+    : "—";
+
+  const subs = document.getElementById("subscriptionsList");
+  subs.innerHTML = "";
+  if (Array.isArray(data.subscriptions) && data.subscriptions.length) {
+    data.subscriptions.forEach((s) => {
+      const row = document.createElement("div");
+      row.className = "flex items-center justify-between border border-slate-800 bg-slate-950 rounded-lg px-4 py-3";
+      row.innerHTML = `
+        <div>
+          <p class="font-medium">${s.store}</p>
+          <p class="text-xs text-slate-400">${s.payments_found} payments found</p>
+        </div>
+        <div class="text-right">
+          <p class="font-semibold">${money(s.estimated_monthly)}/mo</p>
+          <p class="text-xs text-slate-400">${money(s.estimated_yearly)}/yr</p>
+        </div>
+      `;
+      subs.appendChild(row);
+    });
+  } else {
+    subs.innerHTML = `<p class="text-slate-500 text-sm">No recurring subscriptions detected yet.</p>`;
+  }
+
+  const tips = document.getElementById("tipsList");
+  tips.innerHTML = "";
+  if (Array.isArray(data.tips) && data.tips.length) {
+    data.tips.forEach((tip) => {
+      const row = document.createElement("div");
+      row.className = "border border-slate-800 bg-slate-950 rounded-lg px-4 py-3 text-sm";
+      row.textContent = tip;
+      tips.appendChild(row);
+    });
+  } else {
+    tips.innerHTML = `<p class="text-slate-500 text-sm">No savings tips yet.</p>`;
+  }
+
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("analysisWrap").classList.remove("hidden");
+}
+
+loadAnalysis();
+</script>
+</body>
+</html>
