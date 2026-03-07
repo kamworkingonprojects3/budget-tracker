@@ -12,14 +12,14 @@
 <body class="bg-slate-950 text-slate-100">
 
 <!-- AUTH MODAL -->
-<div id="authModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-50">
-  <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6">
-    <div class="flex items-start justify-between">
-      <div>
-        <h2 class="text-xl font-semibold">Sign in</h2>
+<div id="authModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-50 px-3">
+  <div class="w-[92vw] max-w-md bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h2 class="text-lg sm:text-xl font-semibold">Sign in</h2>
         <p class="text-sm text-slate-400 mt-1">Create an account or log in to access your budget.</p>
       </div>
-      <button id="authCloseBtn" class="text-slate-400 hover:text-slate-200">✕</button>
+      <button id="authCloseBtn" class="text-slate-400 hover:text-slate-200 shrink-0">✕</button>
     </div>
 
     <div class="mt-5 space-y-3">
@@ -37,7 +37,7 @@
                placeholder="at least 6 characters" />
       </div>
 
-      <div id="authError" class="hidden text-sm text-red-300 bg-red-900/20 border border-red-900/40 px-3 py-2 rounded">
+      <div id="authError" class="hidden text-sm text-red-300 bg-red-900/20 border border-red-900/40 px-3 py-2 rounded break-words">
         Error
       </div>
 
@@ -59,75 +59,77 @@
   </div>
 </div>
 
-<div class="max-w-7xl mx-auto px-6 py-8">
+<div class="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
 
 <!-- HEADER -->
-<header class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-8">
-  <div>
-    <div class="flex items-center gap-3 flex-wrap">
-      <h1 class="text-3xl font-semibold tracking-tight">Budget Tracker</h1>
+<header class="flex flex-col gap-4 mb-6 md:mb-8">
+  <div class="min-w-0">
+    <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+      <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight">Budget Tracker</h1>
       <span id="premiumBadge" class="hidden px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
         Premium
       </span>
     </div>
-    <p class="text-slate-400 mt-1">Weekly budget + Gmail receipt sync</p>
-    <p id="userLine" class="text-xs text-slate-500 mt-2 hidden"></p>
+    <p class="text-slate-400 mt-1 text-sm sm:text-base">Weekly budget + Gmail receipt sync</p>
+    <p id="userLine" class="text-xs text-slate-500 mt-2 hidden break-all"></p>
   </div>
 
-  <div class="flex flex-wrap items-center gap-3">
+  <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
     <!-- TABS -->
-    <nav class="flex items-center border border-slate-800 bg-slate-900 rounded-md overflow-hidden">
+    <nav class="flex w-full overflow-x-auto border border-slate-800 bg-slate-900 rounded-md">
       <a href="/" id="tabDashboard"
-         class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800">
+         class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800 whitespace-nowrap">
         Dashboard
       </a>
       <a href="/insights" id="tabInsights"
-         class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800">
+         class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800 whitespace-nowrap">
         Insights
       </a>
       <a href="/ai-analysis" id="tabAI"
-         class="px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800">
+         class="px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800 whitespace-nowrap">
         AI Analysis
       </a>
     </nav>
 
     <!-- ACTIONS -->
-    <button id="upgradeBtn"
-      class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold rounded-md hidden">
-      Upgrade $4/mo
-    </button>
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+      <button id="upgradeBtn"
+        class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold rounded-md hidden">
+        Upgrade $4/mo
+      </button>
 
-    <a href="/gmail/login"
-       class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-medium rounded-md">
-      Connect Gmail
-    </a>
+      <a href="/gmail/login"
+         class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-medium rounded-md">
+        Connect Gmail
+      </a>
 
-    <button id="syncBtn"
-      class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
-      Sync
-    </button>
+      <button id="syncBtn"
+        class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+        Sync
+      </button>
 
-    <button id="refreshAllBtn"
-      class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
-      Refresh
-    </button>
+      <button id="refreshAllBtn"
+        class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+        Refresh
+      </button>
 
-    <button id="logoutBtn"
-      class="px-3 py-2 bg-slate-950 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
-      Log out
-    </button>
+      <button id="logoutBtn"
+        class="px-3 py-2 bg-slate-950 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+        Log out
+      </button>
+    </div>
   </div>
 </header>
 
-<div id="banner" class="hidden mb-6 border border-slate-800 bg-slate-900 px-4 py-3 text-sm rounded-md">
+<div id="banner" class="hidden mb-6 border border-slate-800 bg-slate-900 px-4 py-3 text-sm rounded-md break-words">
   <span id="bannerText"></span>
 </div>
 
 <!-- PREMIUM PROMO -->
-<section id="premiumPromo" class="hidden mb-6 border border-amber-500/20 bg-amber-500/5 rounded-xl p-5">
+<section id="premiumPromo" class="hidden mb-6 border border-amber-500/20 bg-amber-500/5 rounded-xl p-4 sm:p-5">
   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-    <div>
-      <h2 class="text-lg font-semibold text-amber-300">Unlock Premium AI Insights</h2>
+    <div class="min-w-0">
+      <h2 class="text-base sm:text-lg font-semibold text-amber-300">Unlock Premium AI Insights</h2>
       <p class="text-sm text-slate-300 mt-1">
         Find hidden subscriptions, get AI spending summaries, and spot where your money is going.
       </p>
@@ -141,7 +143,7 @@
     <div class="flex items-center gap-3">
       <div class="text-right">
         <p class="text-xs text-slate-400">Premium</p>
-        <p class="text-2xl font-bold text-amber-300">$4/mo</p>
+        <p class="text-xl sm:text-2xl font-bold text-amber-300">$4/mo</p>
       </div>
       <button id="promoUpgradeBtn"
         class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold rounded-md">
@@ -152,26 +154,26 @@
 </section>
 
 <!-- TOP SECTION -->
-<section class="grid lg:grid-cols-12 gap-6 mb-6">
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-6">
   <!-- LEFT PANEL -->
-  <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
-    <div class="flex items-center justify-between">
+  <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
+    <div class="flex items-center justify-between gap-3">
       <h2 class="text-sm font-medium text-slate-300">This Week</h2>
       <button id="resetBtn"
-        class="text-xs px-2 py-1 bg-slate-950 hover:bg-slate-800 rounded-md border border-slate-800">
+        class="text-xs px-2 py-1 bg-slate-950 hover:bg-slate-800 rounded-md border border-slate-800 shrink-0">
         Reset
       </button>
     </div>
 
     <div class="mt-5 space-y-4">
-      <div class="flex items-baseline justify-between">
+      <div class="flex items-baseline justify-between gap-3">
         <span class="text-slate-400 text-sm">Weekly Limit</span>
-        <span id="weeklyLimit" class="text-2xl font-semibold">$—</span>
+        <span id="weeklyLimit" class="text-xl sm:text-2xl font-semibold text-right">$—</span>
       </div>
 
-      <div class="flex items-baseline justify-between">
+      <div class="flex items-baseline justify-between gap-3">
         <span class="text-slate-400 text-sm">Remaining</span>
-        <span id="remaining" class="text-2xl font-semibold">$—</span>
+        <span id="remaining" class="text-xl sm:text-2xl font-semibold text-right">$—</span>
       </div>
 
       <div>
@@ -179,43 +181,43 @@
           <div id="progressBar" class="h-2 bg-emerald-500" style="width:0%"></div>
         </div>
 
-        <div class="flex justify-between mt-2">
+        <div class="flex justify-between mt-2 gap-3">
           <p id="progressText" class="text-xs text-slate-400">0% used</p>
-          <p id="lowWarn" class="text-xs text-red-400 hidden">Low budget</p>
+          <p id="lowWarn" class="text-xs text-red-400 hidden shrink-0">Low budget</p>
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-3 pt-2">
-        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg">
+      <div class="grid grid-cols-3 gap-2 sm:gap-3 pt-2">
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg min-w-0">
           <p class="text-xs text-slate-400">Spent</p>
-          <p id="weeklySpentSmall" class="text-lg font-semibold">$—</p>
+          <p id="weeklySpentSmall" class="text-base sm:text-lg font-semibold">$—</p>
         </div>
 
-        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg">
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg min-w-0">
           <p class="text-xs text-slate-400">Txns</p>
-          <p id="txnCount" class="text-lg font-semibold">—</p>
+          <p id="txnCount" class="text-base sm:text-lg font-semibold">—</p>
         </div>
 
-        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg">
+        <div class="bg-slate-950 border border-slate-800 p-3 rounded-lg min-w-0">
           <p class="text-xs text-slate-400">Avg/day</p>
-          <p id="avgPerDay" class="text-lg font-semibold">$—</p>
+          <p id="avgPerDay" class="text-base sm:text-lg font-semibold">$—</p>
         </div>
       </div>
 
-      <div class="bg-slate-950 border border-slate-800 p-4 rounded-lg">
+      <div class="bg-slate-950 border border-slate-800 p-4 rounded-lg min-w-0">
         <p class="text-xs text-slate-400">Top stores this week</p>
-        <p id="topStore" class="text-lg font-semibold mt-1 break-words">—</p>
+        <p id="topStore" class="text-base sm:text-lg font-semibold mt-1 break-words">—</p>
         <div id="topStoresList" class="mt-3 space-y-2 text-sm"></div>
       </div>
 
       <div class="pt-3 border-t border-slate-800">
         <label class="text-xs text-slate-400">Set weekly budget</label>
-        <div class="flex gap-2 mt-2">
+        <div class="flex flex-col sm:flex-row gap-2 mt-2">
           <input id="budgetInput" type="number" step="0.01"
                  class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
                  placeholder="e.g. 200" />
           <button id="setBudgetBtn"
-                  class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-sm font-medium rounded-md">
+                  class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-sm font-medium rounded-md sm:shrink-0">
             Save
           </button>
         </div>
@@ -224,26 +226,26 @@
   </div>
 
   <!-- CHART PANEL -->
-  <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-5">
-    <div class="flex items-center justify-between mb-4 gap-4">
-      <div>
+  <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+      <div class="min-w-0">
         <h2 class="text-sm font-medium text-slate-300">Spending (last 7 days)</h2>
         <p class="text-xs text-slate-500 mt-1">Shows totals per day</p>
       </div>
-      <div class="text-right shrink-0">
+      <div class="text-left sm:text-right shrink-0">
         <p class="text-xs text-slate-400">Weekly spent</p>
-        <p id="weeklySpent" class="text-2xl font-semibold">$—</p>
+        <p id="weeklySpent" class="text-xl sm:text-2xl font-semibold">$—</p>
       </div>
     </div>
 
-    <div class="h-72">
+    <div class="h-56 sm:h-64 md:h-72">
       <canvas id="spendChart"></canvas>
     </div>
 
-    <div class="grid sm:grid-cols-2 gap-3 mt-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
       <div class="bg-slate-950 border border-slate-800 p-4 rounded-lg min-w-0">
         <p class="text-xs text-slate-400">Top store this week</p>
-        <p id="topStoreChart" class="text-lg font-semibold mt-1 break-words">—</p>
+        <p id="topStoreChart" class="text-base sm:text-lg font-semibold mt-1 break-words">—</p>
       </div>
 
       <div class="bg-slate-950 border border-slate-800 p-4 rounded-lg">
@@ -257,8 +259,8 @@
 </section>
 
 <!-- ADD TRANSACTION + TX LIST -->
-<section class="grid lg:grid-cols-12 gap-6">
-  <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5">
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+  <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
     <h2 class="text-sm font-medium text-slate-300">Add transaction</h2>
     <div class="mt-4 space-y-2">
       <input id="amountInput" type="number" step="0.01"
@@ -280,23 +282,27 @@
     </div>
   </div>
 
-  <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-5">
-    <div class="flex items-center justify-between">
+  <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
+    <div class="flex items-center justify-between gap-3">
       <h2 class="text-sm font-medium text-slate-300">Recent transactions</h2>
       <button id="refreshTxBtn"
-              class="text-xs px-2 py-1 bg-slate-950 hover:bg-slate-800 rounded-md border border-slate-800">
+              class="text-xs px-2 py-1 bg-slate-950 hover:bg-slate-800 rounded-md border border-slate-800 shrink-0">
         Refresh
       </button>
     </div>
 
     <div class="mt-4 border border-slate-800 rounded-lg overflow-hidden">
-      <div class="grid grid-cols-12 text-xs text-slate-400 bg-slate-950 px-3 py-2 border-b border-slate-800">
-        <div class="col-span-5">Store</div>
-        <div class="col-span-5">Date</div>
-        <div class="col-span-2 text-right">Amount</div>
-      </div>
+      <div class="overflow-x-auto">
+        <div class="min-w-[560px]">
+          <div class="grid grid-cols-12 text-xs text-slate-400 bg-slate-950 px-3 py-2 border-b border-slate-800">
+            <div class="col-span-5">Store</div>
+            <div class="col-span-5">Date</div>
+            <div class="col-span-2 text-right">Amount</div>
+          </div>
 
-      <div id="txList" class="max-h-72 overflow-auto divide-y divide-slate-800"></div>
+          <div id="txList" class="max-h-72 overflow-auto divide-y divide-slate-800"></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -415,7 +421,6 @@ async function ensureLoggedIn() {
   return false;
 }
 
-// Handle URL banners
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get("gmail") === "connected") {
   showBanner("Gmail connected ✅");
@@ -430,7 +435,6 @@ if (urlParams.get("checkout") === "cancelled") {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
-// Chart
 let chart;
 function renderChart(labels, values) {
   const ctx = document.getElementById("spendChart");
@@ -469,7 +473,6 @@ function renderChart(labels, values) {
   });
 }
 
-// API loaders
 async function loadBudget() {
   const res = await fetch(API + "/budget", {
     cache: "no-store",
@@ -535,7 +538,7 @@ async function loadTransactions() {
 
   (txs || []).slice(0, 30).forEach((t) => {
     const row = document.createElement("div");
-    row.className = "grid grid-cols-12 px-3 py-2 text-sm";
+    row.className = "grid grid-cols-12 px-3 py-2 text-sm min-w-[560px]";
     row.innerHTML = `
       <div class="col-span-5 truncate pr-2">${t.store ?? "—"}</div>
       <div class="col-span-5 text-slate-400 text-xs pr-2">${fmtDate(t.created_at)}</div>
@@ -628,7 +631,6 @@ async function refreshAll() {
   ]);
 }
 
-// Buttons
 document.getElementById("setBudgetBtn").onclick = async () => {
   const amount = document.getElementById("budgetInput").value;
   if (!amount || Number(amount) <= 0) {
@@ -747,13 +749,11 @@ document.getElementById("tabAI").onclick = (e) => {
   }
 };
 
-// Modal controls
 document.getElementById("authCloseBtn").onclick = () => closeAuthModal();
 document.getElementById("authModal").addEventListener("click", (e) => {
   if (e.target.id === "authModal") closeAuthModal();
 });
 
-// Auth buttons
 document.getElementById("signupBtn").onclick = async () => {
   clearAuthError();
 
@@ -822,7 +822,6 @@ document.getElementById("loginBtn").onclick = async () => {
   await refreshAll();
 };
 
-// Boot
 (async () => {
   const ok = await ensureLoggedIn();
   if (ok) await refreshAll();

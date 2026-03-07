@@ -827,9 +827,30 @@ def insights_data(request: Request, db: Session = Depends(get_db)):
 
     biggest_sorted = sorted(txs, key=lambda t: float(t.amount), reverse=True)[:10]
     biggest_txs = [
-        {"id": t.id, "store": t.store, "amount": float(t.amount), "created_at": iso(t.created_at)}
+        {
+            "id": t.id,
+            "store": t.store,
+            "amount": float(t.amount),
+            "created_at": iso(t.created_at),
+        }
         for t in biggest_sorted
     ]
+
+    # -------- daily trend data --------
+    today = datetime.now(timezone.utc).date()
+    start_day = today - timedelta(days=6)
+    daily_buckets = {
+        (start_day + timedelta(days=i)).isoformat(): 0.0
+        for i in range(7)
+    }
+
+    for t in txs:
+        day_key = t.created_at.astimezone(timezone.utc).date().isoformat()
+        if day_key in daily_buckets:
+            daily_buckets[day_key] += float(t.amount)
+
+    daily_labels = [d[5:] for d in daily_buckets.keys()]   # MM-DD
+    daily_values = [round(v, 2) for v in daily_buckets.values()]
 
     return {
         "week_start": week_start.isoformat(),
@@ -838,6 +859,10 @@ def insights_data(request: Request, db: Session = Depends(get_db)):
         "top_stores": top_stores_list,
         "largest_tx": largest_tx,
         "biggest_txs": biggest_txs,
+        "daily": {
+            "labels": daily_labels,
+            "values": daily_values,
+        },
     }
 
 

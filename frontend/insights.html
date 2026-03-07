@@ -11,14 +11,14 @@
 <body class="bg-slate-950 text-slate-100">
 
 <!-- AUTH MODAL -->
-<div id="authModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-50">
-  <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6">
-    <div class="flex items-start justify-between">
-      <div>
-        <h2 class="text-xl font-semibold">Sign in</h2>
+<div id="authModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-50 px-3">
+  <div class="w-[92vw] max-w-md bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h2 class="text-lg sm:text-xl font-semibold">Sign in</h2>
         <p class="text-sm text-slate-400 mt-1">Log in to view your Insights.</p>
       </div>
-      <button id="authCloseBtn" class="text-slate-400 hover:text-slate-200">✕</button>
+      <button id="authCloseBtn" class="text-slate-400 hover:text-slate-200 shrink-0">✕</button>
     </div>
 
     <div class="mt-5 space-y-3">
@@ -36,7 +36,7 @@
                placeholder="at least 6 characters" />
       </div>
 
-      <div id="authError" class="hidden text-sm text-red-300 bg-red-900/20 border border-red-900/40 px-3 py-2 rounded">
+      <div id="authError" class="hidden text-sm text-red-300 bg-red-900/20 border border-red-900/40 px-3 py-2 rounded break-words">
         Error
       </div>
 
@@ -58,65 +58,67 @@
   </div>
 </div>
 
-<div class="max-w-7xl mx-auto px-6 py-8" id="page">
+<div class="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8" id="page">
 
   <!-- HEADER -->
-  <header class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 mb-8">
-    <div>
-      <div class="flex items-center gap-3 flex-wrap">
-        <h1 class="text-3xl font-semibold tracking-tight">Insights</h1>
+  <header class="flex flex-col gap-4 mb-6 md:mb-8">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight">Insights</h1>
         <span id="premiumBadge" class="hidden px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
           Premium
         </span>
       </div>
-      <p class="text-slate-400 mt-1">A quick weekly breakdown of your spending</p>
-      <p id="userLine" class="text-xs text-slate-500 mt-2 hidden"></p>
+      <p class="text-slate-400 mt-1 text-sm sm:text-base">A quick weekly breakdown of your spending</p>
+      <p id="userLine" class="text-xs text-slate-500 mt-2 hidden break-all"></p>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3">
+    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
       <!-- Tabs -->
-      <nav class="flex items-center border border-slate-800 bg-slate-900 rounded-md overflow-hidden">
+      <nav class="flex w-full overflow-x-auto border border-slate-800 bg-slate-900 rounded-md">
         <a href="/"
-           class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800">
+           class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800 whitespace-nowrap">
           Dashboard
         </a>
         <a href="/insights"
-           class="px-4 py-2 text-sm font-medium bg-slate-800 text-slate-100 border-r border-slate-800">
+           class="px-4 py-2 text-sm font-medium bg-slate-800 text-slate-100 border-r border-slate-800 whitespace-nowrap">
           Insights
         </a>
         <a href="/ai-analysis" id="tabAI"
-           class="px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800">
+           class="px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800 whitespace-nowrap">
           AI Analysis
         </a>
       </nav>
 
-      <button id="upgradeBtn"
-        class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold rounded-md hidden">
-        Upgrade $4/mo
-      </button>
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <button id="upgradeBtn"
+          class="px-3 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold rounded-md hidden">
+          Upgrade $4/mo
+        </button>
 
-      <button id="backBtn"
-        class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium border border-slate-800 rounded-md">
-        ← Back
-      </button>
+        <button id="backBtn"
+          class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium border border-slate-800 rounded-md">
+          ← Back
+        </button>
 
-      <button id="refreshBtn"
-        class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium border border-slate-800 rounded-md">
-        Refresh
-      </button>
+        <button id="refreshBtn"
+          class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium border border-slate-800 rounded-md">
+          Refresh
+        </button>
 
-      <button id="logoutBtn"
-        class="px-3 py-2 bg-slate-950 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
-        Log out
-      </button>
+        <button id="logoutBtn"
+          class="px-3 py-2 bg-slate-950 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+          Log out
+        </button>
+      </div>
     </div>
   </header>
 
   <!-- PREMIUM PROMO -->
-  <section id="premiumPromo" class="hidden mb-6 border border-amber-500/20 bg-amber-500/5 rounded-xl p-5">
+  <section id="premiumPromo" class="hidden mb-6 border border-amber-500/20 bg-amber-500/5 rounded-xl p-4 sm:p-5">
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-      <div>
-        <h2 class="text-lg font-semibold text-amber-300">Unlock Premium AI Insights</h2>
+      <div class="min-w-0">
+        <h2 class="text-base sm:text-lg font-semibold text-amber-300">Unlock Premium AI Insights</h2>
         <p class="text-sm text-slate-300 mt-1">
           Detect hidden subscriptions, get spending summaries, and unlock smarter savings advice.
         </p>
@@ -130,58 +132,58 @@
   </section>
 
   <!-- Cards -->
-  <section class="grid md:grid-cols-4 gap-4 mb-6">
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+  <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl">
       <p class="text-xs text-slate-400">Weekly spent</p>
-      <p id="weeklySpent" class="text-2xl font-semibold mt-1">$—</p>
+      <p id="weeklySpent" class="text-xl sm:text-2xl font-semibold mt-1">$—</p>
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl">
       <p class="text-xs text-slate-400">Average per day</p>
-      <p id="avgPerDay" class="text-2xl font-semibold mt-1">$—</p>
+      <p id="avgPerDay" class="text-xl sm:text-2xl font-semibold mt-1">$—</p>
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl min-w-0">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl min-w-0">
       <p class="text-xs text-slate-400">Largest purchase</p>
-      <p id="largestPurchase" class="text-2xl font-semibold mt-1">$—</p>
+      <p id="largestPurchase" class="text-xl sm:text-2xl font-semibold mt-1">$—</p>
       <p id="largestMeta" class="text-xs text-slate-500 mt-1 break-words">—</p>
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl">
       <p class="text-xs text-slate-400">Week start</p>
-      <p id="weekStart" class="text-lg font-semibold mt-2">—</p>
+      <p id="weekStart" class="text-base sm:text-lg font-semibold mt-2 break-words">—</p>
       <p class="text-xs text-slate-500 mt-1">UTC week start from server</p>
     </div>
   </section>
 
   <!-- Charts -->
-  <section class="grid lg:grid-cols-2 gap-6 mb-6">
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-      <div class="flex items-center justify-between mb-3">
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl">
+      <div class="flex items-center justify-between gap-3 mb-3">
         <h2 class="text-sm font-medium text-slate-300">Top stores chart</h2>
-        <span class="text-xs text-slate-500">top 5</span>
+        <span class="text-xs text-slate-500 shrink-0">top 5</span>
       </div>
-      <div class="h-72">
+      <div class="h-56 sm:h-64 md:h-72">
         <canvas id="storesChart"></canvas>
       </div>
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-      <div class="flex items-center justify-between mb-3">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl">
+      <div class="flex items-center justify-between gap-3 mb-3">
         <h2 class="text-sm font-medium text-slate-300">Biggest transactions chart</h2>
-        <span class="text-xs text-slate-500">top 10</span>
+        <span class="text-xs text-slate-500 shrink-0">top 10</span>
       </div>
-      <div class="h-72">
+      <div class="h-56 sm:h-64 md:h-72">
         <canvas id="txChart"></canvas>
       </div>
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl lg:col-span-2">
-      <div class="flex items-center justify-between mb-3">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl lg:col-span-2">
+      <div class="flex items-center justify-between gap-3 mb-3">
         <h2 class="text-sm font-medium text-slate-300">Daily spending trend</h2>
-        <span class="text-xs text-slate-500">last 7 days</span>
+        <span class="text-xs text-slate-500 shrink-0">last 7 days</span>
       </div>
-      <div class="h-72">
+      <div class="h-56 sm:h-64 md:h-72">
         <canvas id="dailyChart"></canvas>
       </div>
       <p id="dailyHint" class="text-xs text-slate-500 mt-2 hidden">
@@ -191,20 +193,27 @@
   </section>
 
   <!-- Lists -->
-  <section class="grid lg:grid-cols-2 gap-6">
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-medium text-slate-300">Top stores (this week)</h2>
       </div>
       <div id="topStores" class="space-y-2"></div>
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
-      <div class="flex items-center justify-between mb-3">
+    <div class="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl">
+      <div class="flex items-center justify-between gap-3 mb-3">
         <h2 class="text-sm font-medium text-slate-300">Biggest transactions</h2>
-        <span class="text-xs text-slate-500">top 10</span>
+        <span class="text-xs text-slate-500 shrink-0">top 10</span>
       </div>
-      <div id="bigTxs" class="divide-y divide-slate-800 border border-slate-800 rounded-lg overflow-hidden"></div>
+
+      <div class="border border-slate-800 rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+          <div class="min-w-[560px]">
+            <div id="bigTxs" class="divide-y divide-slate-800"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -214,7 +223,6 @@
 const API = "";
 let isPremium = false;
 
-// ---------- helpers ----------
 function money(n) {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return "$—";
   return "$" + Number(n).toFixed(2);
@@ -238,7 +246,6 @@ async function parseJsonSafe(res) {
   }
 }
 
-// ---------- auth modal helpers ----------
 function showAuthError(msg) {
   const box = document.getElementById("authError");
   if (!box) return;
@@ -310,13 +317,11 @@ async function ensureLoggedIn() {
   return false;
 }
 
-// ---------- back button ----------
 document.getElementById("backBtn").onclick = () => {
   if (window.history.length > 1) window.history.back();
   else window.location.href = "/";
 };
 
-// ---------- chart helpers ----------
 let storesChartInstance = null;
 let txChartInstance = null;
 let dailyChartInstance = null;
@@ -396,7 +401,6 @@ function renderLineChart(canvasId, labels, values) {
   });
 }
 
-// ---------- main loader ----------
 async function loadInsights() {
   const res = await fetch(API + "/insights_data", {
     cache: "no-store",
@@ -450,7 +454,7 @@ async function loadInsights() {
   } else {
     data.biggest_txs.forEach((t) => {
       const row = document.createElement("div");
-      row.className = "grid grid-cols-12 px-3 py-2 text-sm bg-slate-900";
+      row.className = "grid grid-cols-12 px-3 py-2 text-sm bg-slate-900 min-w-[560px]";
       row.innerHTML = `
         <div class="col-span-6 truncate pr-2">${t.store}</div>
         <div class="col-span-4 text-slate-400 text-xs pr-2">${fmtDate(t.created_at)}</div>
@@ -481,7 +485,6 @@ async function loadInsights() {
   }
 }
 
-// refresh button
 document.getElementById("refreshBtn").onclick = async () => {
   try {
     await loadInsights();
@@ -490,7 +493,6 @@ document.getElementById("refreshBtn").onclick = async () => {
   }
 };
 
-// logout
 document.getElementById("logoutBtn").onclick = async () => {
   await fetch(API + "/auth/logout", {
     method: "POST",
@@ -514,13 +516,11 @@ document.getElementById("tabAI").onclick = (e) => {
   }
 };
 
-// modal controls
 document.getElementById("authCloseBtn").onclick = () => closeAuthModal();
 document.getElementById("authModal").addEventListener("click", (e) => {
   if (e.target.id === "authModal") closeAuthModal();
 });
 
-// signup / login
 document.getElementById("signupBtn").onclick = async () => {
   clearAuthError();
 
@@ -587,7 +587,6 @@ document.getElementById("loginBtn").onclick = async () => {
   await loadInsights();
 };
 
-// boot
 (async () => {
   const ok = await ensureLoggedIn();
   if (!ok) return;
@@ -596,9 +595,9 @@ document.getElementById("loginBtn").onclick = async () => {
     await loadInsights();
   } catch (err) {
     document.getElementById("page").innerHTML = `
-      <div class="max-w-3xl mx-auto px-6 py-10 text-slate-100">
+      <div class="max-w-3xl mx-auto px-4 sm:px-6 py-10 text-slate-100">
         <h1 class="text-2xl font-semibold">Insights failed to load</h1>
-        <p class="text-slate-400 mt-2">Error: <span class="text-red-300">${String(err)}</span></p>
+        <p class="text-slate-400 mt-2">Error: <span class="text-red-300 break-words">${String(err)}</span></p>
         <a href="/" class="inline-block mt-4 px-3 py-2 bg-slate-900 border border-slate-800 rounded">← Back</a>
       </div>
     `;
