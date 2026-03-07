@@ -24,10 +24,8 @@ from gmail_service import (
     make_flow,
     build_gmail_service,
     search_receipt_message_ids,
-    get_message_snippet,
-    extract_amount_from_text,
+    extract_receipt_data,
 )
-
 # ---------------- App setup ----------------
 app = FastAPI()
 
@@ -763,19 +761,27 @@ def gmail_sync(request: Request, db: Session = Depends(get_db)):
             skipped += 1
             continue
 
-        snippet = get_message_snippet(service, msg_id)
-        amount = extract_amount_from_text(snippet)
+        receipt = extract_receipt_data(service, msg_id)
 
         db.add(ProcessedEmail(user_id=user.id, gmail_message_id=msg_id))
 
-        if amount is None:
+        if receipt["amount"] is None:
             no_amount += 1
             continue
 
-        tx = Transaction(user_id=user.id, amount=float(amount), store="Email receipt", category="Email")
+        amount = float(receipt["amount"])
+
+        tx = Transaction(
+            user_id=user.id,
+            amount=amount,
+            store=receipt["store"],
+            category=receipt["category"],
+        )
+
         db.add(tx)
 
-        budget.remaining = float(budget.remaining) - float(amount)
+        budget.remaining = max(0, float(budget.remaining) - amount)
+
         imported += 1
 
     db.commit()
