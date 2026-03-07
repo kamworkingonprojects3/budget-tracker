@@ -47,7 +47,7 @@ with engine.connect() as conn:
         print("✅ Database schema patched")
     except Exception as e:
         print("DB patch skipped:", e)
-        
+
 pwd = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -59,7 +59,7 @@ IS_PROD = os.getenv("RENDER", "").lower() == "true" or os.getenv("ENV", "").lowe
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-APP_URL = os.getenv("APP_URL", "http://127.0.0.1:8000")
+APP_URL = os.getenv("APP_URL", "https://budget-tracker-ke3y.onrender.com")
 
 app.add_middleware(
     SessionMiddleware,
