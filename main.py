@@ -3,10 +3,12 @@ from fastapi.responses import RedirectResponse, FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel as PydanticModel
 
 from sqlalchemy.orm import Session
 from google.oauth2.credentials import Credentials
 from passlib.context import CryptContext
+from passlib.exc import UnknownHashError
 
 import json
 import os
@@ -90,6 +92,12 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# ---------------- Request Models ----------------
+class AuthIn(PydanticModel):
+    email: str
+    password: str
 
 
 # ---------------- Helpers ----------------
@@ -249,8 +257,9 @@ def serve_ai_analysis(request: Request, db: Session = Depends(get_db)):
 
 # ---------------- Auth ----------------
 @app.post("/auth/signup")
-def signup(email: str, password: str, request: Request, db: Session = Depends(get_db)):
-    email = (email or "").strip().lower()
+def signup(data: AuthIn, request: Request, db: Session = Depends(get_db)):
+    email = (data.email or "").strip().lower()
+    password = data.password
 
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="Invalid email")
@@ -271,11 +280,32 @@ def signup(email: str, password: str, request: Request, db: Session = Depends(ge
 
 
 @app.post("/auth/login")
-def login(email: str, password: str, request: Request, db: Session = Depends(get_db)):
-    email = (email or "").strip().lower()
-    user = db.query(User).filter(User.email == email).first()
+def login(data: AuthIn, request: Request, db: Session = Depends(get_db)):
+    email = (data.email or "").strip().lower()
+    password = data.password
 
-    if not user or not pwd.verify(password, user.password_hash):
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid email or password")
+
+    valid = False
+
+    try:
+        if user.password_hash:
+            valid = pwd.verify(password, user.password_hash)
+    except UnknownHashError:
+        # Old database rows may have plain-text passwords instead of hashes
+        if user.password_hash == password:
+            user.password_hash = pwd.hash(password)
+            db.commit()
+            valid = True
+        else:
+            valid = False
+    except Exception as e:
+        print("Login password verify error:", repr(e))
+        valid = False
+
+    if not valid:
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
     request.session["user_id"] = user.id

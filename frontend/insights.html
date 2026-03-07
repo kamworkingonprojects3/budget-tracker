@@ -219,27 +219,48 @@ function money(n) {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return "$—";
   return "$" + Number(n).toFixed(2);
 }
+
 function fmtDate(iso) {
   if (!iso) return "";
   return new Date(iso).toLocaleString();
 }
+
 async function apiText(res) {
   try { return await res.text(); } catch { return ""; }
+}
+
+async function parseJsonSafe(res) {
+  const text = await apiText(res);
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
 }
 
 // ---------- auth modal helpers ----------
 function showAuthError(msg) {
   const box = document.getElementById("authError");
+  if (!box) return;
   box.textContent = msg;
   box.classList.remove("hidden");
 }
+
+function clearAuthError() {
+  const box = document.getElementById("authError");
+  if (!box) return;
+  box.textContent = "";
+  box.classList.add("hidden");
+}
+
 function openAuthModal() {
-  document.getElementById("authError").classList.add("hidden");
+  clearAuthError();
   const m = document.getElementById("authModal");
   m.classList.remove("hidden");
   m.classList.add("flex");
   document.getElementById("authEmail").focus();
 }
+
 function closeAuthModal() {
   const m = document.getElementById("authModal");
   m.classList.add("hidden");
@@ -253,15 +274,15 @@ function updatePremiumUI() {
   const aiTab = document.getElementById("tabAI");
 
   if (isPremium) {
-    badge.classList.remove("hidden");
-    upgradeBtn.classList.add("hidden");
-    promo.classList.add("hidden");
-    aiTab.textContent = "AI Analysis";
+    badge?.classList.remove("hidden");
+    upgradeBtn?.classList.add("hidden");
+    promo?.classList.add("hidden");
+    if (aiTab) aiTab.textContent = "AI Analysis";
   } else {
-    badge.classList.add("hidden");
-    upgradeBtn.classList.remove("hidden");
-    promo.classList.remove("hidden");
-    aiTab.textContent = "AI Analysis 🔒";
+    badge?.classList.add("hidden");
+    upgradeBtn?.classList.remove("hidden");
+    promo?.classList.remove("hidden");
+    if (aiTab) aiTab.textContent = "AI Analysis 🔒";
   }
 }
 
@@ -276,8 +297,10 @@ async function ensureLoggedIn() {
     isPremium = !!me.premium;
 
     const line = document.getElementById("userLine");
-    line.textContent = "Signed in as: " + me.email;
-    line.classList.remove("hidden");
+    if (line) {
+      line.textContent = "Signed in as: " + me.email;
+      line.classList.remove("hidden");
+    }
 
     updatePremiumUI();
     return true;
@@ -499,40 +522,66 @@ document.getElementById("authModal").addEventListener("click", (e) => {
 
 // signup / login
 document.getElementById("signupBtn").onclick = async () => {
+  clearAuthError();
+
   const email = document.getElementById("authEmail").value.trim();
   const password = document.getElementById("authPassword").value;
-  if (!email || !password) return showAuthError("Enter email and password.");
 
-  const res = await fetch(API + `/auth/signup?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, {
+  if (!email || !password) {
+    return showAuthError("Enter email and password.");
+  }
+
+  const res = await fetch(API + "/auth/signup", {
     method: "POST",
-    credentials: "include"
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email: email,
+      password: password
+    })
   });
 
-  const text = await apiText(res);
-  let data = {};
-  try { data = JSON.parse(text); } catch {}
+  const data = await parseJsonSafe(res);
 
-  if (!res.ok || data.error) return showAuthError(data.error || ("HTTP " + res.status));
+  if (!res.ok || data.error) {
+    return showAuthError(data.detail || data.error || ("HTTP " + res.status));
+  }
+
   closeAuthModal();
   await ensureLoggedIn();
   await loadInsights();
 };
 
 document.getElementById("loginBtn").onclick = async () => {
+  clearAuthError();
+
   const email = document.getElementById("authEmail").value.trim();
   const password = document.getElementById("authPassword").value;
-  if (!email || !password) return showAuthError("Enter email and password.");
 
-  const res = await fetch(API + `/auth/login?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, {
+  if (!email || !password) {
+    return showAuthError("Enter email and password.");
+  }
+
+  const res = await fetch(API + "/auth/login", {
     method: "POST",
-    credentials: "include"
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email: email,
+      password: password
+    })
   });
 
-  const text = await apiText(res);
-  let data = {};
-  try { data = JSON.parse(text); } catch {}
+  const data = await parseJsonSafe(res);
 
-  if (!res.ok || data.error) return showAuthError(data.error || ("HTTP " + res.status));
+  if (!res.ok || data.error) {
+    return showAuthError(data.detail || data.error || ("HTTP " + res.status));
+  }
+
   closeAuthModal();
   await ensureLoggedIn();
   await loadInsights();
