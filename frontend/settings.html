@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings • Budget Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-950 text-slate-100">
+
+<div id="authModal" class="fixed inset-0 hidden items-center justify-center bg-black/60 z-50 px-3">
+  <div class="w-[92vw] max-w-md bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-6">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h2 class="text-lg sm:text-xl font-semibold">Sign in</h2>
+        <p class="text-sm text-slate-400 mt-1">Log in to view your settings.</p>
+      </div>
+      <button id="authCloseBtn" class="text-slate-400 hover:text-slate-200 shrink-0">✕</button>
+    </div>
+
+    <div class="mt-5 space-y-3">
+      <div>
+        <label class="text-xs text-slate-400">Email</label>
+        <input id="authEmail" type="email"
+               class="mt-1 w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+               placeholder="you@email.com" />
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400">Password</label>
+        <input id="authPassword" type="password"
+               class="mt-1 w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+               placeholder="at least 6 characters" />
+      </div>
+
+      <div id="authError" class="hidden text-sm text-red-300 bg-red-900/20 border border-red-900/40 px-3 py-2 rounded break-words">
+        Error
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button id="signupBtn"
+                class="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-sm font-medium rounded-md">
+          Sign up
+        </button>
+        <button id="loginBtn"
+                class="flex-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-medium rounded-md">
+          Log in
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+
+  <header class="flex flex-col gap-4 mb-6 md:mb-8">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+        <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight">Settings</h1>
+        <span id="premiumBadge" class="hidden px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+          Premium
+        </span>
+      </div>
+      <p class="text-slate-400 mt-1 text-sm sm:text-base">Manage your account, Gmail, and subscription</p>
+      <p id="userLine" class="text-xs text-slate-500 mt-2 hidden break-all"></p>
+    </div>
+
+    <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+      <nav class="flex w-full overflow-x-auto border border-slate-800 bg-slate-900 rounded-md">
+        <a href="/" class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800 whitespace-nowrap">Dashboard</a>
+        <a href="/insights" class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800 whitespace-nowrap">Insights</a>
+        <a href="/ai-analysis" id="tabAI" class="px-4 py-2 text-sm font-medium text-slate-200 border-r border-slate-800 hover:bg-slate-800 whitespace-nowrap">AI Analysis</a>
+        <a href="/settings" class="px-4 py-2 text-sm font-medium bg-slate-800 text-slate-100 whitespace-nowrap">Settings</a>
+      </nav>
+
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <button id="logoutBtn"
+          class="px-3 py-2 bg-slate-950 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+          Log out
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div id="banner" class="hidden mb-6 border border-slate-800 bg-slate-900 px-4 py-3 text-sm rounded-md break-words">
+    <span id="bannerText"></span>
+  </div>
+
+  <section class="grid grid-cols-1 gap-4 md:gap-6">
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
+      <h2 class="text-base font-semibold">Account</h2>
+      <div class="mt-4 space-y-3 text-sm">
+        <div class="flex justify-between gap-4">
+          <span class="text-slate-400">Email</span>
+          <span id="settingsEmail" class="text-right break-all">—</span>
+        </div>
+        <div class="flex justify-between gap-4">
+          <span class="text-slate-400">Plan</span>
+          <span id="settingsPlan" class="text-right">Free</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-semibold">Subscription</h2>
+          <p class="text-sm text-slate-400 mt-1">Manage your premium access</p>
+        </div>
+        <span id="subStatus" class="text-sm text-slate-300">Checking…</span>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-3">
+        <button id="upgradeBtn"
+          class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-semibold rounded-md hidden">
+          Upgrade $4/mo
+        </button>
+        <button id="manageBillingBtn"
+        class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+        Manage Subscription
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base font-semibold">Gmail</h2>
+          <p class="text-sm text-slate-400 mt-1">Connect Gmail to import receipt spending</p>
+        </div>
+        <span id="gmailStatus" class="text-sm text-slate-300">Checking…</span>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-3">
+        <a id="connectGmailBtn" href="/gmail/login"
+           class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm font-medium rounded-md">
+          Connect Gmail
+        </a>
+
+        <button id="disconnectGmailBtn"
+          class="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800 hidden">
+          Disconnect Gmail
+        </button>
+
+        <button id="syncBtn"
+          class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-sm font-medium rounded-md border border-slate-800">
+          Sync Receipts
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5">
+      <h2 class="text-base font-semibold">Budget</h2>
+      <p class="text-sm text-slate-400 mt-1">Update your weekly budget</p>
+
+      <div class="mt-4 flex flex-col sm:flex-row gap-2">
+        <input id="budgetInput" type="number" step="0.01"
+               class="w-full bg-slate-950 border border-slate-800 px-3 py-2 text-sm outline-none focus:border-slate-600 rounded-md"
+               placeholder="Enter weekly budget" />
+        <button id="saveBudgetBtn"
+          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-sm font-medium rounded-md sm:shrink-0">
+          Save Budget
+        </button>
+      </div>
+
+      <p id="budgetCurrent" class="text-sm text-slate-400 mt-3">Current weekly budget: —</p>
+    </div>
+
+  </section>
+</div>
+
+<script>
+const API = "";
+let currentUser = null;
+let isPremium = false;
+
+function showBanner(text) {
+  const b = document.getElementById("banner");
+  const t = document.getElementById("bannerText");
+  if (!b || !t) return;
+  t.textContent = text;
+  b.classList.remove("hidden");
+  setTimeout(() => b.classList.add("hidden"), 3500);
+}
+
+function showAuthError(msg) {
+  const box = document.getElementById("authError");
+  if (!box) return;
+  box.textContent = msg;
+  box.classList.remove("hidden");
+}
+
+function clearAuthError() {
+  const box = document.getElementById("authError");
+  if (!box) return;
+  box.textContent = "";
+  box.classList.add("hidden");
+}
+
+function openAuthModal() {
+  clearAuthError();
+  document.getElementById("authModal").classList.remove("hidden");
+  document.getElementById("authModal").classList.add("flex");
+  document.getElementById("authEmail").focus();
+}
+
+function closeAuthModal() {
+  document.getElementById("authModal").classList.add("hidden");
+  document.getElementById("authModal").classList.remove("flex");
+}
+
+async function apiText(res) {
+  try { return await res.text(); } catch { return ""; }
+}
+
+async function parseJsonSafe(res) {
+  const text = await apiText(res);
+  try { return JSON.parse(text); } catch { return {}; }
+}
+
+function updatePremiumUI() {
+  const premiumBadge = document.getElementById("premiumBadge");
+  const upgradeBtn = document.getElementById("upgradeBtn");
+  const aiTab = document.getElementById("tabAI");
+  const settingsPlan = document.getElementById("settingsPlan");
+  const subStatus = document.getElementById("subStatus");
+
+  if (isPremium) {
+    premiumBadge?.classList.remove("hidden");
+    upgradeBtn?.classList.add("hidden");
+    if (aiTab) aiTab.textContent = "AI Analysis";
+    if (settingsPlan) settingsPlan.textContent = "Premium";
+    if (subStatus) subStatus.textContent = "Premium active";
+  } else {
+    premiumBadge?.classList.add("hidden");
+    upgradeBtn?.classList.remove("hidden");
+    if (aiTab) aiTab.textContent = "AI Analysis 🔒";
+    if (settingsPlan) settingsPlan.textContent = "Free";
+    if (subStatus) subStatus.textContent = "Free plan";
+  }
+}
+
+async function ensureLoggedIn() {
+  const res = await fetch(API + "/auth/me", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (!res.ok) {
+    openAuthModal();
+    return false;
+  }
+
+  const me = await res.json();
+  currentUser = me;
+  isPremium = !!me.premium;
+
+  document.getElementById("userLine").textContent = "Signed in as: " + me.email;
+  document.getElementById("userLine").classList.remove("hidden");
+  document.getElementById("settingsEmail").textContent = me.email;
+
+  updatePremiumUI();
+  return true;
+}
+
+async function loadBudget() {
+  const res = await fetch(API + "/budget", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (!res.ok) return;
+
+  const data = await res.json();
+  if (!data.error) {
+    document.getElementById("budgetCurrent").textContent =
+      "Current weekly budget: $" + Number(data.weekly_limit).toFixed(2);
+  }
+}
+
+async function loadGmailStatus() {
+  const res = await fetch(API + "/gmail/status", {
+    cache: "no-store",
+    credentials: "include"
+  });
+
+  if (!res.ok) return;
+
+  const data = await res.json();
+  const status = document.getElementById("gmailStatus");
+  const connectBtn = document.getElementById("connectGmailBtn");
+  const disconnectBtn = document.getElementById("disconnectGmailBtn");
+
+  if (data.connected) {
+    status.textContent = "Connected";
+    connectBtn.classList.add("hidden");
+    disconnectBtn.classList.remove("hidden");
+  } else {
+    status.textContent = "Not connected";
+    connectBtn.classList.remove("hidden");
+    disconnectBtn.classList.add("hidden");
+  }
+}
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await fetch(API + "/auth/logout", {
+    method: "POST",
+    credentials: "include"
+  });
+  window.location.href = "/";
+};
+
+document.getElementById("upgradeBtn").onclick = () => {
+  window.location.href = "/create-checkout-session";
+};
+document.getElementById("manageBillingBtn").onclick = () => {
+  window.location.href = "/billing-portal";
+};
+document.getElementById("syncBtn").onclick = async () => {
+  const btn = document.getElementById("syncBtn");
+  btn.disabled = true;
+  btn.textContent = "Syncing...";
+
+  try {
+    const res = await fetch(API + "/gmail/sync", {
+      method: "POST",
+      credentials: "include"
+    });
+
+    const data = await parseJsonSafe(res);
+
+    if (!res.ok) {
+      showBanner(data.detail || data.error || "Sync failed");
+      return;
+    }
+
+    showBanner("Gmail synced ✅");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Sync Receipts";
+  }
+};
+
+document.getElementById("disconnectGmailBtn").onclick = async () => {
+  const res = await fetch(API + "/gmail/disconnect", {
+    method: "POST",
+    credentials: "include"
+  });
+
+  if (res.ok) {
+    showBanner("Gmail disconnected");
+    await loadGmailStatus();
+  }
+};
+
+document.getElementById("saveBudgetBtn").onclick = async () => {
+  const amount = document.getElementById("budgetInput").value;
+
+  if (!amount || Number(amount) <= 0) {
+    showBanner("Enter a valid budget amount");
+    return;
+  }
+
+  const res = await fetch(API + `/set_budget?amount=${encodeURIComponent(amount)}`, {
+    method: "POST",
+    credentials: "include"
+  });
+
+  if (!res.ok) {
+    showBanner("Failed to save budget");
+    return;
+  }
+
+  document.getElementById("budgetInput").value = "";
+  showBanner("Budget updated ✅");
+  await loadBudget();
+};
+
+document.getElementById("authCloseBtn").onclick = () => closeAuthModal();
+document.getElementById("authModal").addEventListener("click", (e) => {
+  if (e.target.id === "authModal") closeAuthModal();
+});
+
+document.getElementById("signupBtn").onclick = async () => {
+  clearAuthError();
+
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+
+  if (!email || !password) return showAuthError("Enter email and password.");
+
+  const res = await fetch(API + "/auth/signup", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await parseJsonSafe(res);
+  if (!res.ok || data.error) {
+    return showAuthError(data.detail || data.error || ("HTTP " + res.status));
+  }
+
+  closeAuthModal();
+  showBanner("Account created ✅");
+  await boot();
+};
+
+document.getElementById("loginBtn").onclick = async () => {
+  clearAuthError();
+
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+
+  if (!email || !password) return showAuthError("Enter email and password.");
+
+  const res = await fetch(API + "/auth/login", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await parseJsonSafe(res);
+  if (!res.ok || data.error) {
+    return showAuthError(data.detail || data.error || ("HTTP " + res.status));
+  }
+
+  closeAuthModal();
+  showBanner("Logged in ✅");
+  await boot();
+};
+
+async function boot() {
+  const ok = await ensureLoggedIn();
+  if (!ok) return;
+
+  await Promise.allSettled([
+    loadBudget(),
+    loadGmailStatus()
+  ]);
+}
+
+boot();
+</script>
+
+</body>
+</html>

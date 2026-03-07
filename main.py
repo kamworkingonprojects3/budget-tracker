@@ -26,6 +26,7 @@ from gmail_service import (
     search_receipt_message_ids,
     extract_receipt_data,
 )
+
 # ---------------- App setup ----------------
 app = FastAPI()
 
@@ -40,6 +41,14 @@ with engine.connect() as conn:
         conn.execute(text("""
             ALTER TABLE users
             ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        """))
+        conn.execute(text("""
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255)
+        """))
+        conn.execute(text("""
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255)
         """))
         conn.commit()
         print("✅ Database schema patched")
@@ -268,6 +277,11 @@ def serve_ai_analysis(request: Request, db: Session = Depends(get_db)):
     return FileResponse(os.path.join(FRONTEND_DIR, "ai_analysis.html"))
 
 
+@app.get("/settings")
+def serve_settings():
+    return FileResponse(os.path.join(FRONTEND_DIR, "settings.html"))
+
+
 # ---------------- Auth ----------------
 @app.post("/auth/signup")
 def signup(data: AuthIn, request: Request, db: Session = Depends(get_db)):
@@ -307,7 +321,6 @@ def login(data: AuthIn, request: Request, db: Session = Depends(get_db)):
         if user.password_hash:
             valid = pwd.verify(password, user.password_hash)
     except UnknownHashError:
-        # Old database rows may have plain-text passwords instead of hashes
         if user.password_hash == password:
             user.password_hash = pwd.hash(password)
             db.commit()
@@ -401,19 +414,36 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             user = db.query(User).filter(User.id == int(user_id)).first()
             if user:
                 user.premium = True
+                user.stripe_customer_id = session_data.get("customer")
+                user.stripe_subscription_id = session_data.get("subscription")
                 db.commit()
 
     elif event_type in ["customer.subscription.deleted", "customer.subscription.updated"]:
         subscription = event["data"]["object"]
         status = subscription.get("status")
-        metadata = subscription.get("metadata", {})
-        user_id = metadata.get("user_id")
+        customer_id = subscription.get("customer")
+        subscription_id = subscription.get("id")
 
-        if user_id and status in ["canceled", "unpaid", "incomplete_expired"]:
-            user = db.query(User).filter(User.id == int(user_id)).first()
-            if user:
+        user = None
+
+        if customer_id:
+            user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+
+        if not user:
+            metadata = subscription.get("metadata", {})
+            user_id = metadata.get("user_id")
+            if user_id:
+                user = db.query(User).filter(User.id == int(user_id)).first()
+
+        if user:
+            user.stripe_subscription_id = subscription_id
+
+            if status in ["active", "trialing", "past_due"]:
+                user.premium = True
+            elif status in ["canceled", "unpaid", "incomplete_expired"]:
                 user.premium = False
-                db.commit()
+
+            db.commit()
 
     return {"received": True}
 
@@ -727,7 +757,26 @@ def gmail_auth(request: Request, code: str, state: str, db: Session = Depends(ge
     request.session.pop("code_verifier", None)
 
     params = urlencode({"gmail": "connected"})
-    return RedirectResponse(url=f"/?{params}", status_code=302)
+    return RedirectResponse(url=f"/settings?{params}", status_code=302)
+
+
+@app.get("/gmail/status")
+def gmail_status(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    token_row = db.query(GmailToken).filter(GmailToken.user_id == user.id).first()
+    return {"connected": token_row is not None}
+
+
+@app.post("/gmail/disconnect")
+def gmail_disconnect(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+
+    token_row = db.query(GmailToken).filter(GmailToken.user_id == user.id).first()
+    if token_row:
+        db.delete(token_row)
+        db.commit()
+
+    return {"ok": True, "connected": False}
 
 
 @app.post("/gmail/sync")
@@ -842,7 +891,6 @@ def insights_data(request: Request, db: Session = Depends(get_db)):
         for t in biggest_sorted
     ]
 
-    # -------- daily trend data --------
     today = datetime.now(timezone.utc).date()
     start_day = today - timedelta(days=6)
     daily_buckets = {
@@ -855,7 +903,7 @@ def insights_data(request: Request, db: Session = Depends(get_db)):
         if day_key in daily_buckets:
             daily_buckets[day_key] += float(t.amount)
 
-    daily_labels = [d[5:] for d in daily_buckets.keys()]   # MM-DD
+    daily_labels = [d[5:] for d in daily_buckets.keys()]
     daily_values = [round(v, 2) for v in daily_buckets.values()]
 
     return {
@@ -887,3 +935,20 @@ def ai_analysis_api(request: Request, db: Session = Depends(get_db)):
     )
 
     return build_ai_analysis(user, txs)
+
+@app.get("/billing-portal")
+def billing_portal(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+
+    if not stripe.api_key:
+        raise HTTPException(status_code=500, detail="Missing STRIPE_SECRET_KEY")
+
+    if not user.stripe_customer_id:
+        raise HTTPException(status_code=400, detail="No Stripe customer found for this account")
+
+    session = stripe.billing_portal.Session.create(
+        customer=user.stripe_customer_id,
+        return_url=f"{APP_URL}/settings",
+    )
+
+    return RedirectResponse(session.url, status_code=303)
