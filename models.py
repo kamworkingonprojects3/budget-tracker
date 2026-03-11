@@ -21,8 +21,8 @@ class User(Base):
     transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
     gmail_tokens = relationship("GmailToken", back_populates="user", cascade="all, delete-orphan")
     processed_emails = relationship("ProcessedEmail", back_populates="user", cascade="all, delete-orphan")
-    savings_goals = relationship("SavingsGoal", cascade = "all, delete-orphan")
-    
+    savings_goals = relationship("SavingsGoal", back_populates="user", cascade="all, delete-orphan")
+
 
 class Budget(Base):
     __tablename__ = "budgets"
@@ -69,15 +69,16 @@ class ProcessedEmail(Base):
 
     user = relationship("User", back_populates="processed_emails")
 
+
 class SavingsGoal(Base):
-    _tablename__ = "savings_goals"
+    __tablename__ = "savings_goals"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
-    name = Column(String(255), nullable = False)
-    target_amount = Column(Float, nullable = False)
-    current_amount = Column(Float, nullable = False, default = 0)
-    target_date = Column(DateTime, nullable = True)
-    created_at = Column(DateTime, default=datetime.utcnow,nullable=False)
+    name = Column(String(255), nullable=False)
+    target_amount = Column(Float, nullable=False)
+    current_amount = Column(Float, nullable=False, default=0.0)
+    target_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    user = relationship("User")
+    user = relationship("User", back_populates="savings_goals")
