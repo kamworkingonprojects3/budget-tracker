@@ -19,7 +19,7 @@ from sqlalchemy import text
 import stripe
 
 from database import engine, SessionLocal
-from models import Base, User, Budget, Transaction, GmailToken, ProcessedEmail
+from models import Base, User, Budget, Transaction, GmailToken, ProcessedEmail, SavingsGoal
 from gmail_service import (
     make_flow,
     build_gmail_service,
@@ -50,6 +50,17 @@ with engine.connect() as conn:
             ALTER TABLE users
             ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255)
         """))
+        conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS savings_goals (
+                          id SERIAL PRIMARY KEY,
+                          user_id INTEGER NOT NULL REFERENCES users(id),
+                          name VARCHAR(255) NOT NULL,
+                          target_amount FLOAT NOT NULL,
+                          current_amount FLOAT NOT NULL DEFAULT 0,
+                          target_date TIMESTAMP NULL,
+                          created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    )
+                """))
         conn.commit()
         print("✅ Database schema patched")
     except Exception as e:
@@ -935,7 +946,7 @@ def ai_analysis_api(request: Request, db: Session = Depends(get_db)):
     )
 
     return build_ai_analysis(user, txs)
-
+# ---- Billing Portal ---------------------
 @app.get("/billing-portal")
 def billing_portal(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
@@ -952,3 +963,133 @@ def billing_portal(request: Request, db: Session = Depends(get_db)):
     )
 
     return RedirectResponse(session.url, status_code=303)
+@app.post("/goals/create")
+def create_goal(
+    name: str,
+    target_amount: float,
+    request:Request,
+    db: Session = Depends(get_db),
+    target_date: str | None = None,
+):
+    user = get_current_user(request, db)
+    
+    if not name.strip():
+        raise HTTPException(status_code = 400, detail = "Goal name required")
+    if target_amount <= 0:
+        raise HTTPException(status_code=400, detail="Target amount must be >")
+    
+    parsed_target_date = None
+    if target_date:
+        try:
+            parsed_target_date = datetime.fromisoformat(target_date)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid target_date format")
+
+    goal = SavingsGoal(
+        user_id=user.id,
+        name=name.strip(),
+        target_amount=float(target_amount),
+        current_amount=0.0,
+        target_date=parsed_target_date,
+    )
+
+    db.add(goal)
+    db.commit()
+    db.refresh(goal)
+
+    return {
+        "ok": True,
+        "goal": {
+            "id": goal.id,
+            "name": goal.name,
+            "target_amount": float(goal.target_amount),
+            "current_amount": float(goal.current_amount),
+            "target_date": iso(goal.target_date),
+            "created_at": iso(goal.created_at)
+        }
+    }
+
+@app.get("/goals")
+def list_goals(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+
+    goals = (
+        db.query(SavingsGoal)
+        .filter(SavingsGoal.user_id == user.id)
+        .order_by(SavingsGoal.id.desc())
+        .all()
+    )
+
+    results = []
+    for g in goals:
+        progress = 0.0
+        if g.target_amount > 0:
+            progress = min(100.0, round((float(g.current_amount) / float(g.target_amount)) * 100, 2))
+
+        results.append({
+            "id": g.id,
+            "name": g.name,
+            "target_amount": float(g.target_amount),
+            "current_amount": float(g.current_amount),
+            "remaining_amount": round(max(0, float(g.target_amount) - float(g.current_amount)), 2),
+            "progress_percent": progress,
+            "target_date": iso(g.target_date),
+            "created_at": iso(g.created_at),
+            "completed": float(g.current_amount) >= float(g.target_amount),
+        })
+
+    return results
+
+@app.post("/goals/add")
+def add_to_goal(
+    goal_id: int,
+    amount: float,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    user = get_current_user(request, db)
+
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be > 0")
+
+    goal = (
+        db.query(SavingsGoal)
+        .filter(SavingsGoal.id == goal_id, SavingsGoal.user_id == user.id)
+        .first()
+    )
+
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+
+    goal.current_amount = float(goal.current_amount) + float(amount)
+    db.commit()
+    db.refresh(goal)
+
+    return {
+        "ok": True,
+        "id": goal.id,
+        "name": goal.name,
+        "target_amount": float(goal.target_amount),
+        "current_amount": float(goal.current_amount),
+        "remaining_amount": round(max(0, float(goal.target_amount) - float(goal.current_amount)), 2),
+        "progress_percent": min(100.0, round((float(goal.current_amount) / float(goal.target_amount)) * 100, 2)),
+        "completed": float(goal.current_amount) >= float(goal.target_amount),
+    }
+
+@app.post("/goals/delete")
+def delete_goal(goal_id: int, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+
+    goal = (
+        db.query(SavingsGoal)
+        .filter(SavingsGoal.id == goal_id, SavingsGoal.user_id == user.id)
+        .first()
+    )
+
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+
+    db.delete(goal)
+    db.commit()
+
+    return {"ok": True}
