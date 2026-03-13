@@ -333,9 +333,10 @@
       <div class="overflow-x-auto">
         <div class="min-w-[560px]">
           <div class="grid grid-cols-12 text-xs text-slate-400 bg-slate-950 px-3 py-2 border-b border-slate-800">
-            <div class="col-span-5">Store</div>
-            <div class="col-span-5">Date</div>
+            <div class="col-span-4">Store</div>
+            <div class="col-span-4">Date</div>
             <div class="col-span-2 text-right">Amount</div>
+            <div class="col-span-2 text-right">Action</div>
           </div>
 
           <div id="txList" class="max-h-72 overflow-auto divide-y divide-slate-800"></div>
@@ -661,11 +662,18 @@ async function loadTransactions() {
 
   (txs || []).slice(0, 30).forEach((t) => {
     const row = document.createElement("div");
-    row.className = "grid grid-cols-12 px-3 py-2 text-sm min-w-[560px]";
+    row.className = "grid grid-cols-12 px-3 py-2 text-sm min-w-[640px]";
     row.innerHTML = `
-      <div class="col-span-5 truncate pr-2">${t.store ?? "—"}</div>
-      <div class="col-span-5 text-slate-400 text-xs pr-2">${fmtDate(t.created_at)}</div>
+      <div class="col-span-4 truncate pr-2">${t.store ?? "—"}</div>
+      <div class="col-span-4 text-slate-400 text-xs pr-2">${fmtDate(t.created_at)}</div>
       <div class="col-span-2 text-right font-medium">${money(t.amount)}</div>
+      <div class="col-span-2 text-right">
+        <button
+          onclick="deleteTransaction(${t.id})"
+          class="px-2 py-1 text-xs bg-red-900/30 hover:bg-red-800/40 text-red-200 border border-red-900/40 rounded">
+          Delete
+        </button>
+      </div>
     `;
     list.appendChild(row);
   });
@@ -754,7 +762,31 @@ async function refreshAll() {
     loadGoals()
   ]);
 }
+async function deleteTransaction(transactionId) {
+  const confirmed = confirm("Delete this transaction?");
+  if (!confirmed) return;
 
+  const res = await fetch(
+    API + `/delete_transaction?transaction_id=${encodeURIComponent(transactionId)}`,
+    {
+      method: "POST",
+      credentials: "include"
+    }
+  );
+
+  if (res.status === 401) {
+    openAuthModal();
+    return;
+  }
+
+  if (!res.ok) {
+    alert("Failed to delete transaction.");
+    return;
+  }
+
+  showBanner("Transaction deleted");
+  await refreshAll();
+}
 document.getElementById("createGoalBtn").onclick = () => {
   const box = document.getElementById("createGoalBox");
   box.classList.toggle("hidden");

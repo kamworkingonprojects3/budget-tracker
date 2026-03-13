@@ -603,7 +603,35 @@ def list_transactions(request: Request, db: Session = Depends(get_db)):
         }
         for t in txs
     ]
+@app.post("/delete_transaction")
+def delete_transaction(transaction_id: int, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
 
+    tx = (
+        db.query(Transaction)
+        .filter(Transaction.id == transaction_id, Transaction.user_id == user.id)
+        .first()
+    )
+
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+
+    budget = db.query(Budget).filter(Budget.user_id == user.id).first()
+
+    amount = float(tx.amount)
+
+    db.delete(tx)
+
+    if budget:
+        budget.remaining = float(budget.remaining) + amount
+
+        weekly_limit = float(budget.weekly_limit or 0)
+        if weekly_limit > 0:
+            budget.remaining = min(float(budget.remaining), weekly_limit)
+
+    db.commit()
+
+    return {"ok": True, "deleted_id": transaction_id}
 
 @app.get("/weekly_summary")
 def weekly_summary(request: Request, db: Session = Depends(get_db)):
@@ -1093,3 +1121,4 @@ def delete_goal(goal_id: int, request: Request, db: Session = Depends(get_db)):
     db.commit()
 
     return {"ok": True}
+
